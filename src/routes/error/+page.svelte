@@ -125,14 +125,14 @@
         {#if isAuthError}
           <button
             onclick={goHome}
-            class="w-full px-4 py-3 bg-accent-500 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 hover:bg-accent-600">
+            class="w-full px-4 py-3 bg-rose-400 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-2 hover:bg-rose-500">
             <Icon src={Home} size="20" class="inline mr-2" />
             Go to Login
           </button>
         {:else}
           <button
             onclick={goBack}
-            class="w-full px-4 py-3 bg-accent-500 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 hover:bg-accent-600">
+            class="w-full px-4 py-3 bg-rose-400 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-2 hover:bg-rose-500">
             <Icon src={ArrowLeft} size="20" class="inline mr-2" />
             Go Back
           </button>
