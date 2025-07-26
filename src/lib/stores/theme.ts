@@ -1,5 +1,6 @@
 import { writable, derived } from 'svelte/store';
 import { invoke } from '@tauri-apps/api/core';
+import { logger } from '../../utils/logger';
 import { themeService, type ThemeManifest } from '../services/themeService';
 
 // Create a writable store with the default accent color
@@ -91,6 +92,8 @@ export async function loadTheme() {
 
 // Function to update the accent color
 export async function updateAccentColor(color: string) {
+  logger.info('themeStore', 'updateAccentColor', `Updating accent color to: ${color}`);
+  
   try {
     const settings = await invoke<any>('get_settings');
     await invoke('save_settings', {
@@ -100,8 +103,9 @@ export async function updateAccentColor(color: string) {
       },
     });
     accentColor.set(color);
+    logger.debug('themeStore', 'updateAccentColor', 'Accent color updated successfully');
   } catch (e) {
-    console.error('Failed to update accent color:', e);
+    logger.error('themeStore', 'updateAccentColor', `Failed to update accent color: ${e}`, { error: e, color });
   }
 }
 

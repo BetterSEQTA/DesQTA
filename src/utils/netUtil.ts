@@ -293,9 +293,11 @@ export async function seqtaFetch(input: string, init?: SeqtaRequestInit): Promis
   } catch (e) {
     useMock = false;
   }
+  
   if (useMock) {
     return mockApiResponse(input);
   }
+  
   try {
     const response = await invoke('fetch_api_data', {
       url: input,
@@ -306,9 +308,9 @@ export async function seqtaFetch(input: string, init?: SeqtaRequestInit): Promis
       isImage: init?.is_image || false,
       returnUrl: init?.return_url || false,
     });
+    
     return response;
   } catch (error) {
-    console.error('seqtaFetch error:', error);
     throw new Error(error instanceof Error ? error.message : 'Unknown fetch error');
   }
 }

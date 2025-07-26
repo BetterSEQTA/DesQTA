@@ -34,13 +34,15 @@
 
   async function checkAuthentication() {
     try {
-      const user = await invoke('get_cloud_user');
-      if (user) {
-        cloudUser = user;
+      const result = await invoke<{ user: any; token: string | null }>('get_cloud_user');
+      if (result && result.user && result.token) {
+        cloudUser = result.user;
         isAuthenticated = true;
       }
     } catch (err) {
       // User not authenticated, that's fine
+      cloudUser = null;
+      isAuthenticated = false;
     }
   }
 
@@ -56,8 +58,8 @@
     operation = 'authenticating';
 
     try {
-      const user = await invoke('save_cloud_token', { token: token.trim() });
-      cloudUser = user;
+      const result = await invoke<{ user: any; token: string }>('save_cloud_token', { token: token.trim() });
+      cloudUser = result.user;
       isAuthenticated = true;
       success = 'Successfully authenticated with BetterSEQTA Plus account';
       token = ''; // Clear the token input for security
@@ -186,7 +188,7 @@
                 {cloudUser.displayName || cloudUser.username}
               </p>
               <p class="text-xs text-green-600 dark:text-green-400">
-                {cloudUser.email}
+                @{cloudUser.username}
               </p>
             </div>
             <button

@@ -1,6 +1,6 @@
 [package]
 name = "desqta"
-version = "0.1.0"
+version = "1.0.0"
 description = "DesQTA, a port of SEQTA to the Desktop"
 authors = ["BetterSEQTA+ Project"]
 edition = "2021"
@@ -27,9 +27,12 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 dirs-next = "2.0"
 base64 = "0.22.1"
+urlencoding = "2"
+chrono = { version = "0.4", features = ["serde"] }
+rand = "0.8"
 
 rss = "2.0.12"
-reqwest = { version = "0.12", features = ["rustls-tls", "json", "native-tls-alpn", "multipart"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "multipart", "cookies"] }
 tokio = { version = "1", features = ["full"] }
 time = "0.3"
 url = "2.5"
@@ -38,7 +41,7 @@ tauri-plugin-single-instance = "2"
 anyhow = "1.0.98"
 xmltree = "0.11.0"
 rayon = "1.8"
-fastembed = "4"
+tokio-util = "0.7.15"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.25"

@@ -9,6 +9,8 @@
   let portalError = $state<string>('');
   let showPortalModal = $state(false);
 
+  const parser = new DOMParser();
+
   async function loadPortal() {
     try {
       const response = await seqtaFetch('/seqta/student/load/portals?', {
@@ -18,8 +20,14 @@
       });
 
       const data = JSON.parse(response);
-      if (data.status === '200' && data.payload?.url) {
-        portalUrl = data.payload.url;
+      if (data.status === '200' && (data.payload?.url || data.payload?.contents)) {
+        if (data.payload?.url) {
+          portalUrl = data.payload.url;
+        } else {
+          const html = parser.parseFromString(data.payload?.contents, 'text/html');
+          const iframe = html.getElementsByTagName('iframe')[0];
+          portalUrl = iframe.src;
+        }
       } else {
         portalError = 'Failed to load portal URL';
       }

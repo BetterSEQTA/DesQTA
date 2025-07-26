@@ -11,8 +11,10 @@
     updateTheme,
   } from '../../lib/stores/theme';
   import { Icon } from 'svelte-hero-icons';
-  import { Plus, ArrowPath, Trash, Rss, Sun, Moon, ComputerDesktop, CloudArrowUp } from 'svelte-hero-icons';
+  import { Plus, ArrowPath, Trash, Rss, Sun, Moon, ComputerDesktop, CloudArrowUp, Cog } from 'svelte-hero-icons';
   import CloudSyncModal from '../../lib/components/CloudSyncModal.svelte';
+  import TroubleshootingModal from '../../lib/components/TroubleshootingModal.svelte';
+  import { logger } from '../../utils/logger';
 
   interface Shortcut {
     name: string;
@@ -40,6 +42,7 @@
 
   let remindersEnabled = true;
   let showCloudSyncModal = false;
+  let showTroubleshootingModal = false;
   let aiIntegrationsEnabled = false;
   let gradeAnalyserEnabled = true;
   let lessonSummaryAnalyserEnabled = true;
@@ -49,6 +52,27 @@
   let devSensitiveInfoHider = false;
   let showDevSettings = false;
   let keyBuffer = '';
+
+  // Cloud user state
+  let cloudUser: any = null;
+  let cloudToken: string | null = null;
+  let cloudUserLoading = true;
+
+  // Set the API URL for cloud sync
+  const CLOUD_API_URL = 'https://accounts.betterseqta.adenmgb.com';
+
+  async function loadCloudUser() {
+    cloudUserLoading = true;
+    try {
+      const result = await invoke<{ user: any; token: string | null }>('get_cloud_user');
+      cloudUser = result.user;
+      cloudToken = result.token;
+    } catch (e) {
+      cloudUser = null;
+      cloudToken = null;
+    }
+    cloudUserLoading = false;
+  }
 
   async function loadSettings() {
     loading = true;
@@ -125,6 +149,24 @@
       devSensitiveInfoHider = false;
     }
     loading = false;
+  }
+
+  // Helper function to get full profile picture URL
+  function getFullPfpUrl(pfpUrl: string | null | undefined): string | null {
+    if (!pfpUrl) return null;
+    
+    // If it's already a full URL, return as is
+    if (pfpUrl.startsWith('http://') || pfpUrl.startsWith('https://')) {
+      return pfpUrl;
+    }
+    
+    // If it's a relative path, prepend the base domain
+    if (pfpUrl.startsWith('/api/files/public/')) {
+      return `https://accounts.betterseqta.adenmgb.com${pfpUrl}`;
+    }
+    
+    // Fallback to DiceBear if it's not a recognized format
+    return pfpUrl;
   }
 
   async function saveSettings() {
@@ -235,6 +277,16 @@
     showCloudSyncModal = false;
   }
 
+  function openTroubleshootingModal() {
+    logger.info('settings', 'openTroubleshootingModal', 'Opening troubleshooting modal from settings page');
+    showTroubleshootingModal = true;
+  }
+
+  function closeTroubleshootingModal() {
+    logger.debug('settings', 'closeTroubleshootingModal', 'Closing troubleshooting modal');
+    showTroubleshootingModal = false;
+  }
+
   function handleSettingsUpload() {
     notify({
       title: 'Settings Uploaded',
@@ -279,7 +331,7 @@
   }
 
   onMount(async () => {
-    await Promise.all([loadSettings(), loadTheme()]);
+    await Promise.all([loadSettings(), loadTheme(), loadCloudUser()]);
     window.addEventListener('keydown', handleKeydown);
   });
   onDestroy(() => {
@@ -289,23 +341,31 @@
 
 <div class="p-4 mx-auto max-w-4xl sm:p-6 md:p-8">
   <div
-    class="sticky top-0 z-50 flex flex-col gap-4 justify-between items-start mb-8 sm:flex-row sm:items-center animate-fade-in-up backdrop-blur-md bg-white/80 dark:bg-slate-900/80 py-4 px-6 border-b border-slate-200 dark:border-slate-800 rounded-xl">
+    class="sticky top-0 z-20 flex flex-col gap-4 justify-between items-start mb-8 sm:flex-row sm:items-center animate-fade-in-up backdrop-blur-md bg-white/80 dark:bg-slate-900/80 py-4 px-6 border-b border-slate-200 dark:border-slate-800 rounded-xl">
     <h1 class="text-xl font-bold sm:text-2xl px-2 py-1 rounded-lg">Settings</h1>
     <div class="flex flex-col gap-2 items-start w-full sm:flex-row sm:items-center sm:w-auto">
-      <button
-        class="px-6 py-2 w-full text-white bg-gradient-to-r from-green-600 to-green-500 rounded-lg shadow-lg transition-all duration-200 sm:w-auto hover:from-green-700 hover:to-green-600 focus:ring-2 focus:ring-green-400 active:scale-95 hover:scale-105 playful"
-        onclick={saveSettings}
-        disabled={saving}>
-        {#if saving}
-          <div class="flex gap-2 justify-center items-center">
-            <div class="w-4 h-4 rounded-full border-2 animate-spin border-white/30 border-t-white">
+      <div class="flex flex-col gap-2 w-full sm:flex-row sm:w-auto">
+        <button
+          class="px-4 py-2 w-full text-white bg-blue-500 rounded-lg shadow transition-all duration-200 sm:w-auto hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 active:scale-95 hover:scale-105 flex items-center justify-center gap-2"
+          onclick={openTroubleshootingModal}>
+          <Icon src={Cog} class="w-4 h-4" />
+          Troubleshooting
+        </button>
+        <button
+          class="px-6 py-2 w-full text-white bg-gradient-to-r from-green-600 to-green-500 rounded-lg shadow-lg transition-all duration-200 sm:w-auto hover:from-green-700 hover:to-green-600 focus:ring-2 focus:ring-green-400 active:scale-95 hover:scale-105 playful"
+          onclick={saveSettings}
+          disabled={saving}>
+          {#if saving}
+            <div class="flex gap-2 justify-center items-center">
+              <div class="w-4 h-4 rounded-full border-2 animate-spin border-white/30 border-t-white">
+              </div>
+              <span>Saving...</span>
             </div>
-            <span>Saving...</span>
-          </div>
-        {:else}
-          Save Changes
-        {/if}
-      </button>
+          {:else}
+            Save Changes
+          {/if}
+        </button>
+      </div>
       {#if saveSuccess}
         <span class="text-sm text-green-400 animate-fade-in sm:text-base"
           >Saved!</span>
@@ -329,43 +389,87 @@
     <div class="space-y-6 sm:space-y-8">
       <!-- Cloud Sync Section -->
       <section
-        class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-sm transition-all duration-300 bg-slate-100/60 dark:bg-slate-800/30 sm:rounded-2xl border-slate-300/30 dark:border-slate-800/30 animate-fade-in-up relative opacity-60">
+        class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-sm transition-all duration-300 bg-white/80 dark:bg-slate-900/50 sm:rounded-2xl border-slate-300/50 dark:border-slate-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up relative">
         <div class="px-4 py-4 border-b sm:px-6 border-slate-300/30 dark:border-slate-800/30">
           <h2 class="text-base font-semibold sm:text-lg text-slate-500 dark:text-slate-400">Cloud Sync</h2>
-          <p class="text-xs text-slate-500 sm:text-sm dark:text-slate-500">
+          <p class="text-xs text-slate-600 sm:text-sm dark:text-slate-400">
             Sync your settings across devices with BetterSEQTA Plus account cloud syncing
           </p>
         </div>
         <div class="p-4 sm:p-6 relative">
-          <!-- Coming Soon Overlay -->
-          <div class="absolute inset-0 flex items-center justify-center bg-slate-200/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-lg z-10">
-            <div class="text-center">
-              <div class="text-2xl font-bold text-slate-600 dark:text-slate-400 mb-2">Coming Soon</div>
-              <div class="text-sm text-slate-500 dark:text-slate-500">Cloud sync functionality will be available in a future update</div>
+          {#if cloudUserLoading}
+            <div class="p-4 rounded-lg bg-slate-200/60 dark:bg-slate-700/30 animate-fade-in">
+              <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full border-2 animate-spin border-slate-400/30 border-t-slate-400"></div>
+                <span class="text-sm text-slate-500 dark:text-slate-400">Loading account status...</span>
+              </div>
             </div>
-          </div>
-          
-          <div class="p-4 rounded-lg bg-slate-200/60 dark:bg-slate-700/30 animate-fade-in opacity-50">
+          {:else if cloudUser && cloudToken}
+            <!-- Logged in state -->
+            <div class="p-4 rounded-lg bg-green-100/60 dark:bg-green-900/30 animate-fade-in border border-green-200 dark:border-green-800">
+              <div class="flex items-start gap-4">
+                {#if cloudUser.pfpUrl}
+                  <img src={getFullPfpUrl(cloudUser.pfpUrl) || `https://api.dicebear.com/7.x/thumbs/svg?seed=${cloudUser.id}`} alt={cloudUser.displayName || cloudUser.username} class="w-12 h-12 rounded-full object-cover border-2 border-green-300 dark:border-green-700" />
+                {:else}
+                  <img src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${cloudUser.id}`} alt={cloudUser.displayName || cloudUser.username} class="w-12 h-12 rounded-full object-cover border-2 border-green-300 dark:border-green-700" />
+                {/if}
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span class="text-sm font-semibold text-green-800 dark:text-green-200">Logged in to BetterSEQTA Plus</span>
+                  </div>
+                  <div class="text-sm text-green-700 dark:text-green-300 mb-1">
+                    <strong>{cloudUser.displayName || cloudUser.username}</strong>
+                  </div>
+                  <div class="text-xs text-green-600 dark:text-green-400 mb-3">@{cloudUser.username}</div>
+                </div>
+              </div>
+              <div class="mt-4 pt-4 border-t border-green-200 dark:border-green-800">
+                <h4 class="text-sm font-semibold text-green-800 dark:text-green-200 mb-2">Settings Synchronization</h4>
+                <p class="text-xs text-green-700 dark:text-green-300 mb-4">
+                  Upload your current settings to the cloud or download settings from another device. 
+                  This includes all your shortcuts, feeds, theme preferences, and other customizations.
+                </p>
+                <div class="flex flex-col gap-3 sm:flex-row">
+                  <button
+                    class="flex gap-2 items-center justify-center px-6 py-3 text-white bg-green-600 hover:bg-green-700 rounded-lg shadow transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                    onclick={openCloudSyncModal}>
+                    <Icon src={CloudArrowUp} class="w-5 h-5" />
+                    Sync Settings
+                  </button>
+                </div>
+              </div>
+            </div>
+          {:else}
+            <!-- Not logged in state -->
+          <div class="p-4 rounded-lg bg-slate-200/60 dark:bg-slate-700/30 animate-fade-in">
             <div class="flex flex-col gap-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-2 h-2 bg-slate-400 rounded-full"></div>
+                  <span class="text-sm font-semibold text-slate-600 dark:text-slate-300">Not logged in to BetterSEQTA Plus</span>
+                </div>
               <div>
                 <h3 class="text-sm font-semibold sm:text-base mb-2 text-slate-500 dark:text-slate-400">Settings Synchronization</h3>
                 <p class="text-xs text-slate-500 sm:text-sm dark:text-slate-500 mb-4">
                   Upload your current settings to the cloud or download settings from another device. 
                   This includes all your shortcuts, feeds, theme preferences, and other customizations.
                 </p>
+                  <p class="text-xs text-slate-500 sm:text-sm dark:text-slate-500 mb-4">
+                    <a href="https://accounts.betterseqta.org" target="_blank" rel="noopener noreferrer"
+                      class="text-blue-600 dark:text-blue-500 hover:underline">
+                      Create a free BetterSEQTA Plus account
+                    </a> to get started with cloud syncing.
+                  </p>
                 <p class="text-xs text-slate-500 sm:text-sm dark:text-slate-500 mb-4">
-                  <a href="https://accounts.betterseqta.org" target="_blank" rel="noopener noreferrer" 
-                     class="text-slate-400 dark:text-slate-500 hover:underline">
-                    Create a free BetterSEQTA Plus account
-                  </a> to get started with cloud syncing.
+                  <strong>Cloud API URL:</strong> {CLOUD_API_URL}
                 </p>
               </div>
               <div class="flex flex-col gap-3 sm:flex-row">
                 <button
-                  class="flex gap-2 items-center justify-center px-6 py-3 text-slate-400 bg-slate-300 dark:bg-slate-600 rounded-lg shadow transition-all duration-200 cursor-not-allowed"
-                  disabled>
+                    class="flex gap-2 items-center justify-center px-6 py-3 text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                  onclick={openCloudSyncModal}>
                   <Icon src={CloudArrowUp} class="w-5 h-5" />
-                  Sync Settings
+                    Login & Sync Settings
                 </button>
                 <div class="text-xs text-slate-500 dark:text-slate-500 sm:self-center">
                   Requires BetterSEQTA Plus account
@@ -373,6 +477,7 @@
               </div>
             </div>
           </div>
+          {/if}
         </div>
       </section>
 
@@ -386,40 +491,6 @@
           </p>
         </div>
         <div class="p-4 space-y-6 sm:p-6">
-          <!-- Shortcuts -->
-          <div>
-            <h3 class="mb-3 text-sm font-semibold sm:text-base sm:mb-4">Quick Access Shortcuts</h3>
-            <p class="mb-4 text-xs text-slate-600 sm:text-sm dark:text-slate-400">
-              Add shortcuts to frequently used websites that will appear at the top of your
-              homepage.
-            </p>
-            <div class="space-y-3 sm:space-y-4">
-              {#each shortcuts as shortcut, idx}
-                <div
-                  class="flex flex-col gap-2 items-start p-3 rounded-lg transition-all duration-200 sm:flex-row sm:items-center bg-slate-100/80 dark:bg-slate-800/50 hover:shadow-lg hover:bg-slate-200/80 dark:hover:bg-slate-700/50 animate-fade-in">
-                  <input
-                    class="px-2 py-1.5 w-full bg-white rounded transition sm:w-32 dark:bg-slate-900/50 focus:ring-2 focus:ring-blue-500"
-                    placeholder="Name"
-                    bind:value={shortcut.name} />
-                  <input
-                    class="px-2 py-1.5 w-full bg-white rounded transition sm:w-10 dark:bg-slate-900/50 focus:ring-2 focus:ring-blue-500"
-                    placeholder="Icon emoji"
-                    bind:value={shortcut.icon} />
-                  <input
-                    class="px-2 py-1.5 w-full bg-white rounded transition sm:flex-10 dark:bg-slate-900/50 focus:ring-2 focus:ring-blue-500"
-                    placeholder="URL"
-                    bind:value={shortcut.url} />
-                  <button
-                    class="px-2 text-red-400 transition-transform duration-200 hover:text-red-600 active:scale-110"
-                    onclick={() => removeShortcut(idx)}
-                    title="Remove">❌</button>
-                </div>
-              {/each}
-              <button
-                class="px-4 py-2 w-full text-white rounded-lg shadow transition-all duration-200 sm:w-auto accent-bg hover:accent-bg-hover focus:ring-2 accent-ring active:scale-95 hover:scale-105"
-                onclick={addShortcut}>Add Shortcut</button>
-            </div>
-          </div>
           <!-- Widget Settings -->
           <div>
             <h3 class="mb-3 text-sm font-semibold sm:text-base sm:mb-4">Widget Settings</h3>
@@ -490,6 +561,74 @@
   {/if}
 {/if}
 
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dashboard Shortcuts Settings -->
+      <section
+        class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-sm transition-all duration-300 delay-150 bg-white/80 dark:bg-slate-900/50 sm:rounded-2xl border-slate-300/50 dark:border-slate-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
+        <div class="px-4 py-4 border-b sm:px-6 border-slate-300/50 dark:border-slate-800/50">
+          <h2 class="text-base font-semibold sm:text-lg">Dashboard Shortcuts</h2>
+          <p class="text-xs text-slate-600 sm:text-sm dark:text-slate-400">
+            Configure quick access shortcuts that appear on your dashboard
+          </p>
+        </div>
+        <div class="p-4 space-y-6 sm:p-6">
+          <div>
+            <h3 class="mb-3 text-sm font-semibold sm:text-base sm:mb-4">Dashboard Quick Actions</h3>
+            <p class="mb-4 text-xs text-slate-600 sm:text-sm dark:text-slate-400">
+              Add shortcuts to frequently used features that will appear as quick action buttons on your dashboard.
+            </p>
+            <div class="space-y-3 sm:space-y-4">
+              {#each shortcuts as shortcut, idx}
+                <div
+                  class="flex flex-col gap-2 items-start p-3 rounded-lg transition-all duration-200 sm:flex-row sm:items-center bg-slate-100/80 dark:bg-slate-800/50 hover:shadow-lg hover:bg-slate-200/80 dark:hover:bg-slate-700/50 animate-fade-in">
+                  <div class="flex flex-col gap-1 w-full sm:w-32">
+                    <label class="text-xs text-slate-600 dark:text-slate-400">Name</label>
+                    <input
+                      class="px-2 py-1.5 w-full bg-white rounded transition dark:bg-slate-900/50 focus:ring-2 focus:ring-blue-500 text-sm"
+                      placeholder="Dashboard"
+                      bind:value={shortcut.name} />
+                  </div>
+                  <div class="flex flex-col gap-1 w-full sm:w-16">
+                    <label class="text-xs text-slate-600 dark:text-slate-400">Icon</label>
+                    <input
+                      class="px-2 py-1.5 w-full bg-white rounded transition dark:bg-slate-900/50 focus:ring-2 focus:ring-blue-500 text-sm text-center"
+                      placeholder="🏠"
+                      bind:value={shortcut.icon} />
+                  </div>
+                  <div class="flex flex-col gap-1 w-full sm:flex-1">
+                    <label class="text-xs text-slate-600 dark:text-slate-400">URL</label>
+                    <input
+                      class="px-2 py-1.5 w-full bg-white rounded transition dark:bg-slate-900/50 focus:ring-2 focus:ring-blue-500 text-sm"
+                      placeholder="/dashboard"
+                      bind:value={shortcut.url} />
+                  </div>
+                  <div class="flex items-end h-full pt-4 sm:pt-0">
+                    <button
+                      class="px-3 py-2 text-red-400 rounded transition-all duration-200 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 active:scale-95"
+                      onclick={() => removeShortcut(idx)}
+                      title="Remove shortcut">
+                      <Icon src={Trash} class="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              {/each}
+              {#if shortcuts.length === 0}
+                <div class="py-8 text-center text-slate-600 dark:text-slate-400 animate-fade-in">
+                  <div class="text-4xl mb-3 opacity-50">⚡</div>
+                  <p class="text-sm">No dashboard shortcuts configured</p>
+                  <p class="mt-1 text-xs">Add your first shortcut to get started</p>
+                </div>
+              {/if}
+              <button
+                class="px-4 py-2 w-full text-white rounded-lg shadow transition-all duration-200 sm:w-auto accent-bg hover:accent-bg-hover focus:ring-2 accent-ring active:scale-95 hover:scale-105 flex items-center justify-center gap-2"
+                onclick={addShortcut}>
+                <Icon src={Plus} class="w-4 h-4" />
+                Add Dashboard Shortcut
+              </button>
             </div>
           </div>
         </div>
@@ -896,7 +1035,7 @@
       {#if showDevSettings}
         <section class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-sm transition-all duration-300 delay-400 bg-white/80 dark:bg-slate-900/50 sm:rounded-2xl border-slate-300/50 dark:border-slate-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
           <div class="px-4 py-4 border-b sm:px-6 border-slate-300/50 dark:border-slate-800/50">
-            <h2 class="text-base font-semibold sm:text-lg">Dev Settings</h2>
+            <h2 class="text-base font-semibold sm:text-lg">Developer Settings</h2>
             <p class="text-xs text-slate-600 sm:text-sm dark:text-slate-400">
               Developer options for debugging and testing
             </p>
@@ -929,6 +1068,12 @@
   onSettingsUpload={handleSettingsUpload}
   onSettingsDownload={handleSettingsDownload}
   on:close={closeCloudSyncModal}
+/>
+
+<!-- Troubleshooting Modal -->
+<TroubleshootingModal 
+  open={showTroubleshootingModal} 
+  onclose={closeTroubleshootingModal} 
 />
 
 <style>
