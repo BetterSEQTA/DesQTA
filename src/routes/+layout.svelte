@@ -8,31 +8,19 @@
   import { authService, type UserInfo } from '../lib/services/authService';
   import { weatherService, type WeatherData } from '../lib/services/weatherService';
   import { errorService } from '../lib/services/errorService';
+  import { logger } from '../utils/logger';
 
   import jsQR from 'jsqr';
 
-  import { onMount, onDestroy } from 'svelte';
   import '../app.css';
   import { accentColor, loadAccentColor, theme, loadTheme, loadCurrentTheme } from '../lib/stores/theme';
-  import { Icon } from 'svelte-hero-icons';
-  import {
-    Home,
-    Newspaper,
-    ClipboardDocumentList,
-    BookOpen,
-    ChatBubbleLeftRight,
-    DocumentText,
-    AcademicCap,
-    ChartBar,
-    Cog6Tooth,
-    CalendarDays,
-    User,
-  } from 'svelte-hero-icons';
+  import { Icon, Home, Newspaper, ClipboardDocumentList, BookOpen, ChatBubbleLeftRight, DocumentText, AcademicCap, ChartBar, Cog6Tooth, CalendarDays, User, GlobeAlt, Swatch, XMark } from 'svelte-hero-icons';
 
   import { writable } from 'svelte/store';
   import { seqtaFetch } from '../utils/netUtil';
   import LoadingScreen from '../lib/components/LoadingScreen.svelte';
   import { page } from '$app/stores';
+  import { onMount, onDestroy } from 'svelte';
   export const needsSetup = writable(false);
 
   let seqtaUrl = $state<string>('');
@@ -47,7 +35,6 @@
   let loadingWeather = $state(false);
   let weatherError = $state('');
 
-  let isMobileMenuOpen = $state(false);
   let isMobile = $state(false);
 
   let sidebarOpen = $state(true);
@@ -65,6 +52,27 @@
   let autoCollapseSidebar = $state(false);
   let autoExpandSidebarHover = $state(false);
 
+  let seqtaConfig: any = $state(null);
+  let menu = $state([
+    { label: 'Dashboard', icon: Home, path: '/' },
+    { label: 'Courses', icon: BookOpen, path: '/courses' },
+    { label: 'Assessments', icon: ClipboardDocumentList, path: '/assessments' },
+    { label: 'Timetable', icon: CalendarDays, path: '/timetable' },
+    { label: 'Messages', icon: ChatBubbleLeftRight, path: '/direqt-messages' },
+    { label: 'Portals', icon: GlobeAlt, path: '/portals' },
+    { label: 'Notices', icon: DocumentText, path: '/notices' },
+    { label: 'News', icon: Newspaper, path: '/news' },
+    { label: 'Directory', icon: User, path: '/directory' },
+    { label: 'Reports', icon: ChartBar, path: '/reports' },
+    { label: 'Settings', icon: Cog6Tooth, path: '/settings' },
+    { label: 'Analytics', icon: AcademicCap, path: '/analytics' },
+  ]);
+  let menuLoading = $state(true);
+
+  import ThemeBuilder from '../lib/components/ThemeBuilder.svelte';
+  import { themeBuilderSidebarOpen } from '../lib/stores/themeBuilderSidebar';
+  import { get } from 'svelte/store';
+
   function handleClickOutside(event: MouseEvent) {
     const target = event.target as Element;
     if (!target.closest('.user-dropdown-container')) {
@@ -73,24 +81,47 @@
   }
 
   async function checkSession() {
-    const sessionExists = await authService.checkSession();
-    needsSetup.set(!sessionExists);
-    if (sessionExists) {
-      loadUserInfo();
+    logger.logFunctionEntry('layout', 'checkSession');
+    logger.info('layout', 'checkSession', 'Checking user session');
+    
+    try {
+      const sessionExists = await authService.checkSession();
+      needsSetup.set(!sessionExists);
+      
+      logger.info('layout', 'checkSession', `Session exists: ${sessionExists}`, { sessionExists });
+      
+      if (sessionExists) {
+        logger.debug('layout', 'checkSession', 'Loading user info');
+        loadUserInfo();
+      }
+      
+      logger.logFunctionExit('layout', 'checkSession', { sessionExists });
+    } catch (error) {
+      logger.error('layout', 'checkSession', `Failed to check session: ${error}`, { error });
     }
   }
 
-  onMount(checkSession);
+  onMount(() => {
+    logger.logComponentMount('layout');
+    logger.info('layout', 'onMount', 'Application layout mounted');
+    checkSession();
+  });
 
   let unlisten: (() => void) | undefined;
   onMount(async () => {
+    logger.debug('layout', 'onMount', 'Setting up reload listener');
     unlisten = await listen<string>('reload', () => {
+      logger.info('layout', 'reload_listener', 'Received reload event');
       location.reload();
     });
   });
 
   onDestroy(() => {
-    if (unlisten) unlisten();
+    logger.logComponentUnmount('layout');
+    if (unlisten) {
+      logger.debug('layout', 'onDestroy', 'Cleaning up reload listener');
+      unlisten();
+    }
   });
 
   // Function to reload enhanced animations setting
@@ -98,9 +129,9 @@
     try {
       const settings = await invoke<{ enhanced_animations?: boolean }>('get_settings');
       enhancedAnimations = settings.enhanced_animations ?? true;
-      console.log('Enhanced animations setting reloaded:', enhancedAnimations);
+      logger.debug('layout', 'reloadEnhancedAnimationsSetting', `Enhanced animations setting reloaded: ${enhancedAnimations}`, { enhancedAnimations });
     } catch (e) {
-      console.error('Failed to reload enhanced animations setting:', e);
+      logger.error('layout', 'reloadEnhancedAnimationsSetting', `Failed to reload enhanced animations setting: ${e}`, { error: e });
     }
   }
 
@@ -131,6 +162,10 @@
     if (autoCollapseSidebar) {
       sidebarOpen = false;
     }
+    // Auto-close sidebar on mobile when menu item is clicked
+    if (isMobile) {
+      sidebarOpen = false;
+    }
   }
 
   // Function to handle mouse hover for auto-expand
@@ -150,78 +185,6 @@
 
   async function startLogin() {
     console.log('[LOGIN_FRONTEND] startLogin called');
-    
-    const input = document.getElementById('seqta-qrcode') as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      const file = input.files[0];
-      console.log('[LOGIN_FRONTEND] Processing QR code file:', file.name);
-      
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageData = e.target?.result as ArrayBuffer;
-        console.log('[LOGIN_FRONTEND] Image data loaded, size:', imageData.byteLength);
-        
-        // Create a blob URL from the array buffer
-        const blob = new Blob([imageData], { type: file.type });
-        const imageUrl = URL.createObjectURL(blob);
-        
-        // Create an image element to load the image
-        const img = new Image();
-        img.onload = () => {
-          console.log('[LOGIN_FRONTEND] Image loaded, dimensions:', img.width, 'x', img.height);
-          
-          // Create a canvas to get pixel data
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          if (!ctx) {
-            console.error('[LOGIN_FRONTEND] Could not get canvas context');
-            return;
-          }
-          
-          // Set canvas size to image size
-          canvas.width = img.width;
-          canvas.height = img.height;
-          
-          // Draw image to canvas
-          ctx.drawImage(img, 0, 0);
-          
-          // Get pixel data
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          console.log('[LOGIN_FRONTEND] Canvas pixel data size:', imageData.data.length);
-          
-          // Decode QR code
-          const code = jsQR(imageData.data, imageData.width, imageData.height);
-          console.log('[LOGIN_FRONTEND] QR code decoded:', code ? 'Success' : 'Failed');
-          
-        if (code) {
-            console.log('[LOGIN_FRONTEND] QR code data:', code.data);
-            // Check if this is a SEQTA deeplink
-            if (code.data.startsWith('seqtalearn://')) {
-              seqtaUrl = code.data;
-              console.log('[LOGIN_FRONTEND] Found SEQTA deeplink:', seqtaUrl);
-            } else {
-              console.error('[LOGIN_FRONTEND] QR code does not contain a valid SEQTA deeplink');
-            }
-          }
-          
-          // Clean up
-          URL.revokeObjectURL(imageUrl);
-        };
-        
-        img.onerror = () => {
-          console.error('[LOGIN_FRONTEND] Failed to load image');
-          URL.revokeObjectURL(imageUrl);
-        };
-        
-        // Load the image
-        img.src = imageUrl;
-      };
-      reader.readAsArrayBuffer(file);
-    }
-    
-    // Wait a bit for the file reader to complete
-    await new Promise(resolve => setTimeout(resolve, 100));
     
     if (!seqtaUrl) {
       console.error('[LOGIN_FRONTEND] No valid SEQTA URL found');
@@ -425,7 +388,12 @@
 
   onMount(() => {
     const checkMobile = () => {
-      isMobile = window.innerWidth < 768;
+      const tauri_platform = import.meta.env.TAURI_ENV_PLATFORM
+      if (tauri_platform == "ios" || tauri_platform == "android") {
+        isMobile = true
+      } else {
+        isMobile = false
+      }
       if (isMobile) {
         sidebarOpen = false;
       }
@@ -445,19 +413,69 @@
     };
   });
 
-  const menu = [
-    { label: 'Dashboard', icon: Home, path: '/' },
-    { label: 'Courses', icon: BookOpen, path: '/courses' },
-    { label: 'Assessments', icon: ClipboardDocumentList, path: '/assessments' },
-    { label: 'Timetable', icon: CalendarDays, path: '/timetable' },
-    { label: 'Messages', icon: ChatBubbleLeftRight, path: '/direqt-messages' },
-    { label: 'Notices', icon: DocumentText, path: '/notices' },
-    { label: 'News', icon: Newspaper, path: '/news' },
-    { label: 'Directory', icon: User, path: '/directory' },
-    { label: 'Reports', icon: ChartBar, path: '/reports' },
-    { label: 'Settings', icon: Cog6Tooth, path: '/settings' },
-    { label: 'Analytics', icon: AcademicCap, path: '/analytics' },
-  ];
+  async function loadSeqtaConfigAndMenu() {
+    try {
+      let config = await invoke('load_seqta_config');
+      let needsFetch = false;
+      let latestConfig = null;
+      if (!config) {
+        needsFetch = true;
+      } else {
+        // Fetch latest config from SEQTA
+        const res = await seqtaFetch('/seqta/student/load/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {},
+        });
+        latestConfig = typeof res === 'string' ? JSON.parse(res) : res;
+        // Check if config is outdated
+        const isDifferent = await invoke('is_seqta_config_different', { newConfig: latestConfig });
+        if (isDifferent) {
+          needsFetch = true;
+        } else {
+          seqtaConfig = config;
+        }
+      }
+      if (needsFetch) {
+        // Save the latest config
+        if (!latestConfig) {
+          const res = await seqtaFetch('/seqta/student/load/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {},
+          });
+          latestConfig = typeof res === 'string' ? JSON.parse(res) : res;
+        }
+        seqtaConfig = latestConfig;
+        await invoke('save_seqta_config', { config: latestConfig });
+      }
+      // Now, build the menu based on config
+      let newMenu = [
+        { label: 'Dashboard', icon: Home, path: '/' },
+        { label: 'Courses', icon: BookOpen, path: '/courses' },
+        { label: 'Assessments', icon: ClipboardDocumentList, path: '/assessments' },
+        { label: 'Timetable', icon: CalendarDays, path: '/timetable' },
+        // Always show DM (Messages) page
+        { label: 'Messages', icon: ChatBubbleLeftRight, path: '/direqt-messages' },
+        { label: 'Portals', icon: GlobeAlt, path: '/portals' },
+        { label: 'Notices', icon: DocumentText, path: '/notices' },
+        { label: 'News', icon: Newspaper, path: '/news' },
+        { label: 'Directory', icon: User, path: '/directory' },
+        { label: 'Reports', icon: ChartBar, path: '/reports' },
+        { label: 'Settings', icon: Cog6Tooth, path: '/settings' },
+        { label: 'Analytics', icon: AcademicCap, path: '/analytics' },
+      ];
+      menu = newMenu;
+    } catch (e) {
+      console.error('Failed to load SEQTA config or menu:', e);
+    } finally {
+      menuLoading = false;
+    }
+  }
+
+  onMount(() => {
+    loadSeqtaConfigAndMenu();
+  });
 </script>
 
 {#if isLoading}
@@ -480,14 +498,30 @@
       />
     {/if}
 
-    <div class="flex flex-1 min-h-0">
+    <div class="flex flex-1 min-h-0 relative">
       {#if !$needsSetup}
-        <AppSidebar {sidebarOpen} {menu} onMenuItemClick={handlePageNavigation} />
+        {#if !menuLoading}
+          <AppSidebar {sidebarOpen} {menu} onMenuItemClick={handlePageNavigation} />
+        {/if}
       {/if}
 
+      <!-- Mobile Sidebar Overlay -->
+      {#if sidebarOpen && isMobile && !$needsSetup}
+        <div
+          class="fixed inset-0 z-20 bg-black/50 sm:hidden"
+          onclick={() => (sidebarOpen = false)}
+          onkeydown={(e) => e.key === 'Escape' && (sidebarOpen = false)}
+          role="button"
+          tabindex="0"
+          aria-label="Close sidebar overlay">
+        </div>
+      {/if}
+
+      <!-- Main Content with ThemeBuilder Sidebar -->
       <main
-        class="overflow-y-auto flex-1 border-t {!$needsSetup ? 'border-l' : ''} border-slate-200 dark:border-slate-700/50"
-        style="background: var(--background-color);">
+        class="overflow-y-auto flex-1 border-t {!$needsSetup ? 'border-l' : ''} border-slate-200 dark:border-slate-700/50 transition-all duration-200"
+        style="background: var(--background-color); margin-right: { $themeBuilderSidebarOpen ? '384px' : '0'};"
+      >
         {#if $needsSetup}
           <LoginScreen
             {seqtaUrl}
@@ -498,21 +532,22 @@
           {@render children()}
         {/if}
       </main>
+
+      <!-- ThemeBuilder Sidebar -->
+      {#if $themeBuilderSidebarOpen}
+        <aside class="fixed top-0 right-0 h-full w-96 z-50 bg-white dark:bg-slate-900 shadow-xl border-l border-slate-200 dark:border-slate-700 flex flex-col transition-transform duration-200" style="transform: translateX(0);">
+          <ThemeBuilder>
+            <button slot="close" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors ml-auto" onclick={() => themeBuilderSidebarOpen.set(false)} aria-label="Close Theme Builder">
+              <Icon src={XMark} class="w-6 h-6" />
+            </button>
+          </ThemeBuilder>
+        </aside>
+      {/if}
     </div>
   </div>
 {/if}
 
-<!-- Mobile Menu Overlay -->
-{#if isMobileMenuOpen}
-  <div
-    class="fixed inset-0 z-40 bg-black/50"
-    onclick={() => (isMobileMenuOpen = false)}
-    onkeydown={(e) => e.key === 'Escape' && (isMobileMenuOpen = false)}
-    role="button"
-    tabindex="0"
-    aria-label="Close mobile menu">
-  </div>
-{/if}
+
 
 <!-- About Modal -->
 <AboutModal bind:open={showAboutModal} onclose={() => (showAboutModal = false)} />

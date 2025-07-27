@@ -18,6 +18,7 @@
   import PagesMenu from './PagesMenu.svelte';
   import GlobalSearch from './GlobalSearch.svelte';
   import { invoke } from '@tauri-apps/api/core';
+  import { logger } from '../../utils/logger';
   import { seqtaFetch } from '../../utils/netUtil';
 
   interface Props {
@@ -139,6 +140,8 @@
   let loadingNotifications = $state(false);
   let notifications = $state<Notification[]>([]);
   let unreadNotifications = $state(0);
+  let isMobile = $state(false);
+  let showNotificationsModal = $state(false);
 
   function handleSelect(page: { name: string; path: string }) {
     searchStore.set('');
@@ -181,11 +184,14 @@
   }
 
   async function loadGlobalSearchSetting() {
+    logger.debug('AppHeader', 'loadGlobalSearchSetting', 'Loading global search setting');
+    
     try {
       const settings = await invoke<{ global_search_enabled?: boolean }>('get_settings');
       globalSearchEnabled = settings.global_search_enabled ?? true;
+      logger.info('AppHeader', 'loadGlobalSearchSetting', `Global search enabled: ${globalSearchEnabled}`);
     } catch (error) {
-      console.error('Failed to load global search setting:', error);
+      logger.error('AppHeader', 'loadGlobalSearchSetting', `Failed to load global search setting: ${error}`, { error });
       globalSearchEnabled = true; // Default to enabled if loading fails
     }
   }
@@ -237,9 +243,19 @@
   }
 
   function toggleNotifications() {
-    showNotifications = !showNotifications;
-    if (showNotifications && notifications.length === 0) {
-      fetchNotifications();
+    logger.debug('AppHeader', 'toggleNotifications', 'Toggling notifications panel', { isMobile });
+    
+    if (isMobile) {
+      showNotificationsModal = !showNotificationsModal;
+      if (showNotificationsModal && notifications.length === 0) {
+        logger.debug('AppHeader', 'toggleNotifications', 'Fetching notifications for mobile modal');
+        fetchNotifications();
+      }
+    } else {
+      showNotifications = !showNotifications;
+      if (showNotifications && notifications.length === 0) {
+        fetchNotifications();
+      }
     }
   }
 
@@ -284,9 +300,31 @@
     return '';
   }
 
+  function handleNotificationClick(notification: Notification) {
+    if (notification.type === 'coneqtassessments' && notification.coneqtAssessments) {
+      const { assessmentID, metaclassID } = notification.coneqtAssessments;
+      goto(`/assessments/${assessmentID}/${metaclassID}`);
+    } else if (notification.type === 'report') {
+      goto('/reports');
+    }
+  }
+
   onMount(() => {
     loadGlobalSearchSetting();
     fetchNotifications();
+    
+    // Check for mobile on mount and resize
+    const checkMobile = async () => {
+      const tauri_platform = import.meta.env.TAURI_ENV_PLATFORM
+      if (tauri_platform == "ios" || tauri_platform == "android") {
+        isMobile = true
+      } else {
+        isMobile = false
+      }
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
     
     // Add click outside handler for notifications
     const handleClickOutside = (event: MouseEvent) => {
@@ -299,6 +337,7 @@
     document.addEventListener('click', handleClickOutside);
     
     return () => {
+      window.removeEventListener('resize', checkMobile);
       document.removeEventListener('click', handleClickOutside);
     };
   });
@@ -309,6 +348,9 @@
   $effect(() => {
     if ($searchStore) selectedIndex = -1;
   });
+
+  // Sort notifications by timestamp descending (latest first)
+  let sortedNotifications = $derived([...notifications].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
 </script>
 
 <header class="flex justify-between items-center px-3 pr-2 w-full h-16 relative z-[999999]" data-tauri-drag-region style="background: var(--background-color);">
@@ -377,7 +419,12 @@
               </div>
             {:else}
               {#each notifications as notification (notification.notificationID)}
-                <div class="p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
+                <button type="button"
+                  class="p-3 w-full text-left rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+                  role="button"
+                  aria-label={getNotificationTitle(notification)}
+                  onclick={() => handleNotificationClick(notification)}
+                  onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { handleNotificationClick(notification); } }}>
                   <div class="flex gap-3">
                     <div class="flex-shrink-0 w-2 h-2 bg-accent rounded-full mt-2"></div>
                     <div class="flex-1 min-w-0">
@@ -394,7 +441,7 @@
                       </p>
                     </div>
                   </div>
-                </div>
+                </button>
               {/each}
             {/if}
           </div>
@@ -414,29 +461,91 @@
       />
     {/if}
 
-    <!-- Window Controls -->
-    <div class="flex items-center ml-4 space-x-2">
-      <button
-        class="flex justify-center items-center w-8 h-8 rounded-lg transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 accent-ring playful"
-        onclick={() => appWindow.minimize()}
-        aria-label="Minimize">
-        <Icon src={Minus} class="w-4 h-4 text-slate-600 dark:text-slate-400" />
-      </button>
-      <button
-        class="flex justify-center items-center w-8 h-8 rounded-lg transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 accent-ring playful"
-        onclick={() => appWindow.toggleMaximize()}
-        aria-label="Maximize">
-        <Icon src={Square2Stack} class="w-4 h-4 text-slate-600 dark:text-slate-400" />
-      </button>
-      <button
-        class="flex justify-center items-center w-8 h-8 rounded-lg transition-all duration-200 group hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 playful"
-        onclick={() => appWindow.close()}
-        aria-label="Close">
-        <Icon src={XMark} class="w-4 h-4 transition duration-200 text-slate-600 dark:text-slate-400 group-hover:text-white" />
-      </button>
-    </div>
+    <!-- Window Controls - Desktop Only -->
+    {#if !isMobile}
+      <div class="flex items-center ml-4 space-x-2">
+        <button
+          class="flex justify-center items-center w-8 h-8 rounded-lg transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 accent-ring playful"
+          onclick={() => appWindow.minimize()}
+          aria-label="Minimize">
+          <Icon src={Minus} class="w-4 h-4 text-slate-600 dark:text-slate-400" />
+        </button>
+        <button
+          class="flex justify-center items-center w-8 h-8 rounded-lg transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 accent-ring playful"
+          onclick={() => appWindow.toggleMaximize()}
+          aria-label="Maximize">
+          <Icon src={Square2Stack} class="w-4 h-4 text-slate-600 dark:text-slate-400" />
+        </button>
+        <button
+          class="flex justify-center items-center w-8 h-8 rounded-lg transition-all duration-200 group hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 playful"
+          onclick={() => appWindow.close()}
+          aria-label="Close">
+          <Icon src={XMark} class="w-4 h-4 transition duration-200 text-slate-600 dark:text-slate-400 group-hover:text-white" />
+        </button>
+      </div>
+    {/if}
   </div>
   {#if showPagesMenu}
     <PagesMenu on:close={closePagesMenu} />
+  {/if}
+  {#if showNotificationsModal}
+    <div
+      class="fixed inset-0 z-[9999999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Notifications"
+      tabindex="0"
+      onclick={() => { showNotificationsModal = false; }}
+      onkeydown={e => { if (e.key === 'Escape') showNotificationsModal = false; }}
+    >
+      <div class="relative w-full max-w-xl mx-auto rounded-2xl bg-white/70 dark:bg-gray-900/80 shadow-2xl border border-white/20 dark:border-gray-700/40 backdrop-blur-xl p-0 flex flex-col animate-in pointer-events-auto" role="document">
+        <div class="flex justify-between items-center p-4 border-b border-slate-200 dark:border-slate-700">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Notifications</h3>
+          <button
+            class="ml-2 px-3 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors font-semibold text-base"
+            onclick={() => { showNotificationsModal = false; }}>
+            Close
+          </button>
+        </div>
+        <div class="p-2 max-h-[70vh] overflow-y-auto">
+          {#if loadingNotifications}
+            <div class="flex justify-center items-center py-8">
+              <div class="w-6 h-6 rounded-full border-2 animate-spin border-accent/30 border-t-accent"></div>
+            </div>
+          {:else if sortedNotifications.length === 0}
+            <div class="text-center py-8 text-slate-500 dark:text-slate-400">
+              <Icon src={Bell} class="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p>No notifications</p>
+            </div>
+          {:else}
+            {#each sortedNotifications as notification (notification.notificationID)}
+              <button type="button"
+                class="p-3 w-full text-left rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+                role="button"
+                aria-label={getNotificationTitle(notification)}
+                onclick={() => handleNotificationClick(notification)}
+                onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { handleNotificationClick(notification); } }}>
+                <div class="flex gap-3">
+                  <div class="flex-shrink-0 w-2 h-2 bg-accent rounded-full mt-2"></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-slate-900 dark:text-white truncate">
+                      {getNotificationTitle(notification)}
+                    </p>
+                    {#if getNotificationSubtitle(notification)}
+                      <p class="text-xs text-slate-600 dark:text-slate-400 mt-1 truncate">
+                        {getNotificationSubtitle(notification)}
+                      </p>
+                    {/if}
+                    <p class="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                      {formatNotificationTime(notification.timestamp)}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            {/each}
+          {/if}
+        </div>
+      </div>
+    </div>
   {/if}
 </header>

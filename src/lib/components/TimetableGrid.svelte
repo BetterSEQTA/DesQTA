@@ -142,7 +142,7 @@
   <div class="flex flex-col flex-1 w-full min-h-0 justify-stretch">
     <!-- Desktop Header Row -->
     <div
-      class="timetable-header-row grid timetable-grid-cols w-full border-b border-slate-300 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
+      class="timetable-header-row grid timetable-grid-cols w-full border-b border-slate-300 dark:border-slate-700" style="background: var(--background-color);">
       <div class="timetable-time-label bg-slate-100 dark:bg-slate-800 border-r border-slate-300 dark:border-slate-700"></div>
       {#each dayLabels as day, index}
         <div
@@ -157,7 +157,7 @@
 
     <!-- Mobile Day Navigation -->
     <div
-      class="flex justify-between items-center px-4 py-2 border-b border-slate-300 sm:hidden bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 dark:border-slate-700">
+      class="flex justify-between items-center px-4 py-2 border-b border-slate-300 sm:hidden dark:border-slate-700" style="background: var(--background-color);">
       <button
         class="flex justify-center items-center w-8 h-8 rounded-lg transition-all duration-200 bg-white/80 hover:bg-white dark:bg-slate-700/80 dark:hover:bg-slate-600 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
         on:click={prevDay}

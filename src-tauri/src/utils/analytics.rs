@@ -23,13 +23,27 @@ pub struct AssessmentData {
 }
 
 fn analytics_file() -> PathBuf {
-    let mut dir = dirs_next::data_dir().expect("Unable to determine data dir");
-    dir.push("DesQTA");
-    if !dir.exists() {
-        fs::create_dir_all(&dir).expect("Unable to create data dir");
+    #[cfg(target_os = "android")]
+    {
+        // On Android, use the app's internal storage directory
+        let mut dir = PathBuf::from("/data/data/com.desqta.app/files");
+        dir.push("DesQTA");
+        if !dir.exists() {
+            fs::create_dir_all(&dir).expect("Unable to create data dir");
+        }
+        dir.push("analytics.json");
+        dir
     }
-    dir.push("analytics.json");
-    dir
+    #[cfg(not(target_os = "android"))]
+    {
+        let mut dir = dirs_next::data_dir().expect("Unable to determine data dir");
+        dir.push("DesQTA");
+        if !dir.exists() {
+            fs::create_dir_all(&dir).expect("Unable to create data dir");
+        }
+        dir.push("analytics.json");
+        dir
+    }
 }
 
 #[tauri::command]

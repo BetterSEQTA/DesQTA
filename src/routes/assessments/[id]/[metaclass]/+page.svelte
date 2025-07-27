@@ -61,7 +61,7 @@
   onMount(loadAssessmentDetails);
 </script>
 
-<div class="min-h-screen dark:bg-slate-950 bg-slate-100">
+<div class="min-h-screen" style="background: var(--background-color);">
   <!-- Header -->
   <AssessmentHeader />
 

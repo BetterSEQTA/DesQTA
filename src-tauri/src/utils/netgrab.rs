@@ -14,6 +14,7 @@ use base64::{engine::general_purpose, Engine as _};
 // opens a file using the default program:
 
 use crate::session;
+use crate::logger;
 
 static GLOBAL_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 
@@ -38,7 +39,7 @@ pub enum RequestMethod {
 }
 
 /// Build an HTTP client with headers based on the saved session.
-fn create_client() -> &'static reqwest::Client {
+pub fn create_client() -> &'static reqwest::Client {
 
     GLOBAL_CLIENT.get_or_init(|| {
         let mut headers = reqwest::header::HeaderMap::new();
@@ -166,6 +167,21 @@ pub async fn fetch_api_data(
     is_image: bool,
     return_url: bool
 ) -> Result<String, String> {
+    // Log function entry
+    if let Some(logger) = logger::get_logger() {
+        let _ = logger.log(
+            logger::LogLevel::DEBUG,
+            "netgrab",
+            "fetch_api_data",
+            &format!("Starting {} {}", format!("{:?}", method), url),
+            serde_json::json!({
+                "url": url,
+                "method": format!("{:?}", method),
+                "is_image": is_image,
+                "return_url": return_url
+            })
+        );
+    }
     let client = create_client();
     let mut session = session::Session::load();
     
@@ -244,7 +260,10 @@ pub async fn fetch_api_data(
             }
         }
         
-        if is_image == true {
+        // Capture status before consuming response
+        let status = resp.status();
+        
+        let result = if is_image == true {
             // Get the bytes (await and ? to bubble up errors)
             let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
             // Encode to base64
@@ -258,9 +277,40 @@ pub async fn fetch_api_data(
         else {
             let text = resp.text().await.map_err(|e| e.to_string())?;
             Ok(text)
+        };
+        
+        // Log successful response
+        if let Some(logger) = logger::get_logger() {
+            let _ = logger.log(
+                logger::LogLevel::DEBUG,
+                "netgrab",
+                "fetch_api_data",
+                &format!("HTTP {} {} -> {}", format!("{:?}", method), url, status),
+                serde_json::json!({
+                    "url": url,
+                    "method": format!("{:?}", method),
+                    "status": status.as_u16(),
+                    "status_text": status.canonical_reason().unwrap_or("Unknown")
+                })
+            );
         }
+        result
     }
     Err(e) => {
+        // Log error
+        if let Some(logger) = logger::get_logger() {
+            let _ = logger.log(
+                logger::LogLevel::ERROR,
+                "netgrab",
+                "fetch_api_data",
+                &format!("HTTP request failed: {}", e),
+                serde_json::json!({
+                    "url": url,
+                    "method": format!("{:?}", method),
+                    "error": e.to_string()
+                })
+            );
+        }
         Err(format!("HTTP request failed: {e}"))
     },
 }
@@ -271,6 +321,16 @@ pub async fn get_api_data(
     url: &str,
     parameters: HashMap<String, String>,
 ) -> Result<String, String> {
+    // Log API call
+    if let Some(logger) = logger::get_logger() {
+        let _ = logger.log(
+            logger::LogLevel::DEBUG,
+            "netgrab",
+            "get_api_data",
+            &format!("GET API call to {}", url),
+            serde_json::json!({"url": url, "parameters": parameters})
+        );
+    }
     fetch_api_data(url, RequestMethod::GET, None, None, Some(parameters), false, false).await
 }
 
@@ -437,36 +497,74 @@ pub fn channel_to_json(channel: &Channel) -> Result<Value> {
 /// Open a login window and harvest the cookie once the user signs in.
 #[tauri::command]
 pub async fn open_url(app: tauri::AppHandle, url: String) -> Result<(), String>{
-    use tauri::{WebviewUrl, WebviewWindowBuilder};
+    // Log URL opening
+    if let Some(logger) = logger::get_logger() {
+        let _ = logger.log(
+            logger::LogLevel::INFO,
+            "netgrab",
+            "open_url",
+            &format!("Opening URL: {}", url),
+            serde_json::json!({"url": url})
+        );
+    }
+    
+    #[cfg(desktop)]
+    {
+        use tauri::{WebviewUrl, WebviewWindowBuilder};
 
-    let http_url;
+        let http_url;
 
-    match url.starts_with("https://") {
-        true => http_url = url.clone(),
-        false => {
-            http_url = format!("https://{}", url.clone());
+        match url.starts_with("https://") {
+            true => http_url = url.clone(),
+            false => {
+                http_url = format!("https://{}", url.clone());
+            }
+        }
+
+        let parsed_url = match Url::parse(&http_url) {
+            Ok(u) => u,
+            Err(e) => return Err(format!("Invalid URL: {}", e))
+        };
+
+        let full_url: Url = match Url::parse(&format!("{}", parsed_url)) {
+            Ok(u) => u,
+            Err(e) => return Err(format!("Invalid URL: {}", e))// Nothing
+
+        };
+
+        // Spawn the login window
+        WebviewWindowBuilder::new(&app, "seqta_login", WebviewUrl::External(full_url.clone()))
+            .title("SEQTA Login")
+            .inner_size(900.0, 700.0)
+            .build()
+            .map_err(|e| format!("Failed to build window: {}", e))?;
+            
+        // Log successful window creation
+        if let Some(logger) = logger::get_logger() {
+            let _ = logger.log(
+                logger::LogLevel::DEBUG,
+                "netgrab",
+                "open_url",
+                "SEQTA login window created successfully",
+                serde_json::json!({"window_id": "seqta_login"})
+            );
         }
     }
-
-    let parsed_url = match Url::parse(&http_url) {
-        Ok(u) => u,
-        Err(e) => return Err(format!("Invalid URL: {}", e))
-    };
-
-    let full_url: Url = match Url::parse(&format!("{}", parsed_url)) {
-        Ok(u) => u,
-        Err(e) => return Err(format!("Invalid URL: {}", e))// Nothing
-
-    };
-
-    // Spawn the login window
-    WebviewWindowBuilder::new(&app, "seqta_login", WebviewUrl::External(full_url.clone()))
-        .title("SEQTA Login")
-        .inner_size(900.0, 700.0)
-        .build()
-        .map_err(|e| format!("Failed to build window: {}", e))?;
+    #[cfg(not(desktop))]
+    {
+        // Log platform limitation
+        if let Some(logger) = logger::get_logger() {
+            let _ = logger.log(
+                logger::LogLevel::WARN,
+                "netgrab",
+                "open_url",
+                "Webview windows not supported on mobile platforms",
+                serde_json::json!({"platform": "mobile"})
+            );
+        }
+        return Err("Webview windows not supported on mobile platforms".to_string());
+    }
     Ok(())
-
 }
 
 #[tauri::command]
@@ -475,6 +573,16 @@ pub async fn post_api_data(
     data: Value,
     parameters: HashMap<String, String>,
 ) -> Result<String, String> {
+    // Log API call
+    if let Some(logger) = logger::get_logger() {
+        let _ = logger.log(
+            logger::LogLevel::DEBUG,
+            "netgrab",
+            "post_api_data",
+            &format!("POST API call to {}", url),
+            serde_json::json!({"url": url, "parameters": parameters, "has_body": !data.is_null()})
+        );
+    }
     fetch_api_data(url, RequestMethod::POST, None, Some(data), Some(parameters), false, false).await
 }
 

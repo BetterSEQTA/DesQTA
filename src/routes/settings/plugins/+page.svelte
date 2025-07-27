@@ -153,8 +153,9 @@
   {:else}
     <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
       {#each plugins as plugin}
-        <div
-          class="overflow-hidden bg-white rounded-2xl border shadow-xl transition-all duration-300 cursor-pointer dark:bg-slate-900 border-slate-300 dark:border-slate-800 hover:shadow-2xl hover:border-blue-700 animate-fade-in-up"
+        <button
+          type="button"
+          class="overflow-hidden bg-white rounded-2xl border shadow-xl transition-all duration-300 cursor-pointer dark:bg-slate-900 border-slate-300 dark:border-slate-800 hover:shadow-2xl hover:border-blue-700 animate-fade-in-up w-full text-left focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
           on:click={() => openPluginDetails(plugin)}>
           <div class="overflow-hidden relative h-32">
             <img
@@ -192,7 +193,7 @@
               </div>
             </div>
           </div>
-        </div>
+        </button>
       {/each}
     </div>
   {/if}

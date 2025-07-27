@@ -7,7 +7,7 @@
 }
 
 html, body {
-  background: var(--background-color) !important;
+  background: transparent !important;
 }
 
 /* Custom scrollbar for sunset theme */

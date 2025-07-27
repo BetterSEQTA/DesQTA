@@ -6,29 +6,58 @@ use std::{
 };
 use reqwest;
 use serde_json;
+use crate::logger;
 
 #[path = "session.rs"]
 mod session;
 
 /// Location: `$DATA_DIR/DesQTA/settings.json`
 fn settings_file() -> PathBuf {
-    let mut dir = dirs_next::data_dir().expect("Unable to determine data dir");
-    dir.push("DesQTA");
-    if !dir.exists() {
-        fs::create_dir_all(&dir).expect("Unable to create data dir");
+    #[cfg(target_os = "android")]
+    {
+        // On Android, use the app's internal storage directory
+        let mut dir = PathBuf::from("/data/data/com.desqta.app/files");
+        dir.push("DesQTA");
+        if !dir.exists() {
+            fs::create_dir_all(&dir).expect("Unable to create data dir");
+        }
+        dir.push("settings.json");
+        dir
     }
-    dir.push("settings.json");
-    dir
+    #[cfg(not(target_os = "android"))]
+    {
+        let mut dir = dirs_next::data_dir().expect("Unable to determine data dir");
+        dir.push("DesQTA");
+        if !dir.exists() {
+            fs::create_dir_all(&dir).expect("Unable to create data dir");
+        }
+        dir.push("settings.json");
+        dir
+    }
 }
 
 fn cloud_token_file() -> PathBuf {
-    let mut dir = dirs_next::data_dir().expect("Unable to determine data dir");
-    dir.push("DesQTA");
-    if !dir.exists() {
-        fs::create_dir_all(&dir).expect("Unable to create data dir");
+    #[cfg(target_os = "android")]
+    {
+        // On Android, use the app's internal storage directory
+        let mut dir = PathBuf::from("/data/data/com.desqta.app/files");
+        dir.push("DesQTA");
+        if !dir.exists() {
+            fs::create_dir_all(&dir).expect("Unable to create data dir");
+        }
+        dir.push("cloud_token.json");
+        dir
     }
-    dir.push("cloud_token.json");
-    dir
+    #[cfg(not(target_os = "android"))]
+    {
+        let mut dir = dirs_next::data_dir().expect("Unable to determine data dir");
+        dir.push("DesQTA");
+        if !dir.exists() {
+            fs::create_dir_all(&dir).expect("Unable to create data dir");
+        }
+        dir.push("cloud_token.json");
+        dir
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
@@ -99,7 +128,7 @@ impl Default for Settings {
             weather_country: String::new(),
             reminders_enabled: true,
             accent_color: "#3b82f6".to_string(), // Default to blue-500
-            theme: "system".to_string(), // Default to system theme
+            theme: "default".to_string(), // Default to DesQTA theme
             disable_school_picture: false,
             enhanced_animations: true,
             gemini_api_key: None,
@@ -108,8 +137,8 @@ impl Default for Settings {
             lesson_summary_analyser_enabled: Some(true),
             auto_collapse_sidebar: false,
             auto_expand_sidebar_hover: false,
-            global_search_enabled: true,
-            current_theme: None,
+            global_search_enabled: false,
+            current_theme: Some("default".to_string()),
             widget_layout: vec![
                 WidgetLayout { id: "shortcuts".to_string(), x: 0, y: 0, width: 2, height: 1, enabled: true },
                 WidgetLayout { id: "today_schedule".to_string(), x: 0, y: 1, width: 2, height: 1, enabled: true },
@@ -150,7 +179,7 @@ pub struct WidgetLayout {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CloudUser {
-    pub id: i32,
+    pub id: String,
     pub email: String,
     pub username: String,
     #[serde(rename = "displayName")]
@@ -161,12 +190,18 @@ pub struct CloudUser {
     pub created_at: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CloudUserWithToken {
+    pub user: Option<CloudUser>,
+    pub token: Option<String>,
+}
+
 // Cloud API types
 #[derive(Debug, Serialize, Deserialize)]
 struct CloudFile {
-    id: i32,
+    id: String,
     #[serde(rename = "userId")]
-    user_id: i32, // Now guaranteed to be present
+    user_id: String, // Now guaranteed to be present
     filename: String,
     #[serde(rename = "storedName")]
     stored_name: String,
@@ -355,12 +390,56 @@ impl Settings {
 
 #[tauri::command]
 pub fn get_settings() -> Settings {
+    if let Some(logger) = logger::get_logger() {
+        let _ = logger.log(
+            logger::LogLevel::DEBUG,
+            "settings",
+            "get_settings",
+            "Loading application settings",
+            serde_json::json!({})
+        );
+    }
     Settings::load()
 }
 
 #[tauri::command]
 pub fn save_settings(new_settings: Settings) -> Result<(), String> {
-    new_settings.save().map_err(|e| e.to_string())
+    if let Some(logger) = logger::get_logger() {
+        let _ = logger.log(
+            logger::LogLevel::INFO,
+            "settings",
+            "save_settings",
+            "Saving application settings",
+            serde_json::json!({})
+        );
+    }
+    
+    match new_settings.save() {
+        Ok(_) => {
+            if let Some(logger) = logger::get_logger() {
+                let _ = logger.log(
+                    logger::LogLevel::DEBUG,
+                    "settings",
+                    "save_settings",
+                    "Settings saved successfully",
+                    serde_json::json!({})
+                );
+            }
+            Ok(())
+        }
+        Err(e) => {
+            if let Some(logger) = logger::get_logger() {
+                let _ = logger.log(
+                    logger::LogLevel::ERROR,
+                    "settings",
+                    "save_settings",
+                    &format!("Failed to save settings: {}", e),
+                    serde_json::json!({"error": e.to_string()})
+                );
+            }
+            Err(e.to_string())
+        }
+    }
 }
 
 #[tauri::command]
@@ -377,7 +456,7 @@ pub fn save_settings_from_json(json: String) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn save_cloud_token(token: String) -> Result<CloudUser, String> {
-    let base_url = "https://accounts.betterseqta.org/api";
+    let base_url = "https://accounts.betterseqta.adenmgb.com/api";
     let client = reqwest::Client::new();
     let response = client
         .get(&format!("{}/auth/me", base_url))
@@ -400,14 +479,18 @@ pub async fn save_cloud_token(token: String) -> Result<CloudUser, String> {
     let mut cloud_token = CloudToken::load();
     cloud_token.token = Some(token);
     cloud_token.user = Some(user.clone());
+    // This uses cloud_token_file(), which saves to the correct Android folder on Android
     cloud_token.save().map_err(|e| e.to_string())?;
     Ok(user)
 }
 
 #[tauri::command]
-pub fn get_cloud_user() -> Option<CloudUser> {
+pub fn get_cloud_user() -> CloudUserWithToken {
     let cloud_token = CloudToken::load();
-    cloud_token.user
+    CloudUserWithToken {
+        user: cloud_token.user,
+        token: cloud_token.token,
+    }
 }
 
 #[tauri::command]
@@ -419,7 +502,7 @@ pub fn clear_cloud_token() -> Result<(), String> {
 pub async fn upload_settings_to_cloud() -> Result<(), String> {
     let cloud_token = CloudToken::load();
     let token = cloud_token.token.clone().ok_or("No cloud token found. Please authenticate first.")?;
-    let base_url = "https://accounts.betterseqta.org/api";
+    let base_url = "https://accounts.betterseqta.adenmgb.com/api";
     let settings = Settings::load();
     let settings_json = settings.to_json()?;
     let client = reqwest::Client::new();
@@ -446,7 +529,7 @@ pub async fn upload_settings_to_cloud() -> Result<(), String> {
 pub async fn download_settings_from_cloud() -> Result<Settings, String> {
     let cloud_token = CloudToken::load();
     let token = cloud_token.token.clone().ok_or("No cloud token found. Please authenticate first.")?;
-    let base_url = "https://accounts.betterseqta.org/api";
+    let base_url = "https://accounts.betterseqta.adenmgb.com/api";
     let client = reqwest::Client::new();
     let response = client
         .get(&format!("{}/files/list", base_url))
@@ -504,7 +587,7 @@ pub async fn download_settings_from_cloud() -> Result<Settings, String> {
 pub async fn check_cloud_settings() -> Result<bool, String> {
     let cloud_token = CloudToken::load();
     let token = cloud_token.token.clone().ok_or("No cloud token found. Please authenticate first.")?;
-    let base_url = "https://accounts.betterseqta.org/api";
+    let base_url = "https://accounts.betterseqta.adenmgb.com/api";
     let client = reqwest::Client::new();
     let response = client
         .get(&format!("{}/files/list", base_url))

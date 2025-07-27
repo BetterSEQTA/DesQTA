@@ -9,7 +9,7 @@
   import TimetableHeader from '$lib/components/TimetableHeader.svelte';
   import TimetableGrid from '$lib/components/TimetableGrid.svelte';
   import TimetablePdfViewer from '$lib/components/TimetablePdfViewer.svelte';
-  import { createEvents, EventStatus } from 'ics';
+  import { createEvents, type EventStatus } from 'ics';
 
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -289,7 +289,7 @@
   });
 </script>
 
-<div class="flex flex-col w-full h-full bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800 text-slate-900 dark:text-slate-50 min-h-screen">
+<div class="flex flex-col w-full h-full text-slate-900 dark:text-slate-50 min-h-screen" style="background: var(--background-color);">
   <TimetableHeader
     {weekStart}
     {loadingLessons}
