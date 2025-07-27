@@ -13,6 +13,7 @@
   import { Icon } from 'svelte-hero-icons';
   import { Plus, ArrowPath, Trash, Rss, Sun, Moon, ComputerDesktop, CloudArrowUp } from 'svelte-hero-icons';
   import CloudSyncModal from '../../lib/components/CloudSyncModal.svelte';
+  import { errorService } from '../../lib/services/errorService';
 
   interface Shortcut {
     name: string;
@@ -276,6 +277,10 @@
     if (keyBuffer === 'dev') {
       showDevSettings = true;
     }
+  }
+
+  function simulateError() {
+    errorService.handleManualError('Simulated error for testing purposes', 500);
   }
 
   onMount(async () => {
@@ -901,7 +906,7 @@
               Developer options for debugging and testing
             </p>
           </div>
-          <div class="p-4 sm:p-6">
+          <div class="p-4 sm:p-6 space-y-4">
             <div class="flex gap-3 items-center">
               <input
                 id="dev-sensitive-info-hider"
@@ -915,6 +920,19 @@
               >
                 Sensitive Info Hider (API responses replaced with random mock data)
               </label>
+            </div>
+            
+            <div class="pt-4 border-t border-slate-200 dark:border-slate-700">
+              <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Testing Tools</h3>
+              <button
+                onclick={simulateError}
+                class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              >
+                🚨 Simulate Error
+              </button>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                Triggers a test error to verify error handling and display
+              </p>
             </div>
           </div>
         </section>

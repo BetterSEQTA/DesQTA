@@ -61,9 +61,23 @@
 
 <svelte:head>
   <title>Error {errorStatus} - DesQTA</title>
+  <style>
+    html, body, #root, #svelte {
+      overflow: hidden !important;
+      height: 100vh !important;
+    }
+    #root {
+      padding: 0 !important;
+      border-radius: 0 !important;
+    }
+    /* Override the layout's main element that causes scrolling */
+    main {
+      overflow: hidden !important;
+    }
+  </style>
 </svelte:head>
 
-<div class="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-8">
+<div class="h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-8 error-page-container" style="min-height: 100vh; height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center;">
   <div class="max-w-lg w-full">
     <div class="bg-white/80 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-8">
       <!-- Error Icon -->
@@ -145,3 +159,11 @@
     </div>
   </div>
 </div> 
+
+<style>
+  /* Ensure the error page container doesn't cause overflow */
+  .error-page-container {
+    height: 100vh;
+    overflow: hidden;
+  }
+</style> 

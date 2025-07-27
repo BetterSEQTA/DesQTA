@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { themeService, type ThemeManifest } from '$lib/services/themeService';
-  import { loadAndApplyTheme, currentTheme } from '$lib/stores/theme';
+  import { githubThemeService, type GitHubTheme } from '$lib/services/githubThemeService';
+  import { loadAndApplyTheme, currentTheme, theme, accentColor, themeManifest } from '$lib/stores/theme';
   import { get } from 'svelte/store';
 
   let availableThemes: ThemeManifest[] = [];
@@ -16,6 +17,11 @@
   let showFonts = false;
   let showAnimations = false;
   let showCustom = false;
+  let showGetMoreThemesModal = false;
+  let githubThemes: GitHubTheme[] = [];
+  let githubLoading = false;
+  let githubError: string | null = null;
+  let downloadedThemes: ThemeManifest[] = [];
 
   // Load all themes from static/themes/*
   async function loadThemes() {
@@ -50,9 +56,55 @@
     }
   }
 
+  async function loadDownloadedThemes() {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const settings = await invoke<any>('get_settings');
+      const savedDownloadedThemes = settings.downloaded_themes || [];
+      downloadedThemes = savedDownloadedThemes;
+    } catch (error) {
+      console.error('Failed to load downloaded themes:', error);
+      downloadedThemes = [];
+    }
+  }
+
+  async function saveDownloadedThemes() {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const settings = await invoke<any>('get_settings');
+      await invoke('save_settings', {
+        newSettings: {
+          ...settings,
+          downloaded_themes: downloadedThemes,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to save downloaded themes:', error);
+    }
+  }
+
+  function isExternalTheme(themeName: string): boolean {
+    return downloadedThemes.some(theme => theme.name.toLowerCase() === themeName.toLowerCase());
+  }
+
+  async function uninstallTheme(themeName: string) {
+    try {
+      downloadedThemes = downloadedThemes.filter(theme => theme.name.toLowerCase() !== themeName.toLowerCase());
+      await saveDownloadedThemes();
+      
+      // If the uninstalled theme was active, switch to default
+      if (currentThemeName === themeName.toLowerCase()) {
+        await handleApplyTheme('default');
+      }
+    } catch (error) {
+      console.error('Failed to uninstall theme:', error);
+    }
+  }
+
   onMount(async () => {
     await loadThemes();
     await loadCurrentTheme();
+    await loadDownloadedThemes();
     currentTheme.subscribe((val) => {
       currentThemeName = val;
     });
@@ -106,6 +158,90 @@
     return name.charAt(0).toUpperCase() + name.slice(1);
   }
   
+  async function loadGitHubThemes() {
+    githubLoading = true;
+    githubError = null;
+    try {
+      const response = await githubThemeService.fetchThemesFromGitHub();
+      if (response.success) {
+        githubThemes = response.themes;
+      } else {
+        githubError = response.error || 'Failed to load themes from GitHub';
+      }
+    } catch (e) {
+      githubError = 'Failed to load themes from GitHub';
+    } finally {
+      githubLoading = false;
+    }
+  }
+
+  async function handleDownloadTheme(theme: GitHubTheme) {
+    try {
+      const manifest = await githubThemeService.downloadTheme(theme);
+      if (manifest) {
+        // Apply the downloaded theme directly without using local theme system
+        await applyDownloadedTheme(manifest);
+        showGetMoreThemesModal = false;
+      }
+    } catch (error) {
+      console.error('Error downloading theme:', error);
+    }
+  }
+
+  async function applyDownloadedTheme(manifest: ThemeManifest) {
+    try {
+      // Set theme properties
+      themeService.setCustomProperties(manifest.customProperties);
+      themeService.setThemeFonts(manifest.fonts);
+      
+      // Update stores
+      currentTheme.set(manifest.name.toLowerCase());
+      themeManifest.set(manifest);
+      
+      // Set accent color
+      accentColor.set(manifest.settings.defaultAccentColor);
+      
+      // Set theme mode
+      theme.set(manifest.settings.defaultTheme);
+      
+      // Apply theme visually
+      if (typeof document !== 'undefined') {
+        const resolvedTheme = manifest.settings.defaultTheme === 'system' 
+          ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          : manifest.settings.defaultTheme;
+        
+        if (resolvedTheme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+        document.documentElement.setAttribute('data-theme', resolvedTheme);
+      }
+      
+      // Save to settings
+      const { invoke } = await import('@tauri-apps/api/core');
+      const settings = await invoke<any>('get_settings');
+      await invoke('save_settings', {
+        newSettings: {
+          ...settings,
+          current_theme: manifest.name.toLowerCase(),
+          accent_color: manifest.settings.defaultAccentColor,
+          theme: manifest.settings.defaultTheme,
+        },
+      });
+      
+      // Add to downloaded themes if not already present
+      const existingIndex = downloadedThemes.findIndex(t => t.name.toLowerCase() === manifest.name.toLowerCase());
+      if (existingIndex === -1) {
+        downloadedThemes = [...downloadedThemes, manifest];
+        await saveDownloadedThemes();
+      }
+      
+    } catch (error) {
+      console.error('Error applying downloaded theme:', error);
+    }
+  }
+  
 </script>
 
 <div class="p-8 max-w-5xl mx-auto">
@@ -120,9 +256,22 @@
         </svg>
         Back to Settings
       </a>
-    <h1 class="text-3xl font-bold">Theme Store</h1>
+      <h1 class="text-3xl font-bold">Theme Store</h1>
     </div>
-   <div class="text-sm text-slate-600 dark:text-slate-400">Current theme: {capitalizeName(currentThemeName)}</div>
+    <div class="flex flex-col items-end gap-2">
+      <div class="flex items-center gap-2">
+        <div class="text-sm text-slate-600 dark:text-slate-400">Current theme: {capitalizeName(currentThemeName)}</div>
+        <button
+          class="ml-4 px-4 py-2 rounded-lg font-semibold text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent accent-bg hover:accent-bg-hover active:scale-95"
+          on:click={async () => {
+            showGetMoreThemesModal = true;
+            await loadGitHubThemes();
+          }}
+        >
+          Get More Themes
+        </button>
+      </div>
+    </div>
   </div>
 
   {#if loading}
@@ -136,10 +285,14 @@
     <div class="text-red-500 text-center py-8">{error}</div>
   {:else}
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-      {#each availableThemes as theme, i (theme.name)}
+      {#each [...availableThemes, ...downloadedThemes] as theme, i (theme.name)}
         <div
           class="rounded-xl shadow-lg p-6 flex flex-col items-center bg-white/10 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 transition-all duration-200 hover:scale-105 hover:shadow-2xl cursor-pointer {currentThemeName === theme.name.toLowerCase() ? 'ring-2 ring-accent' : ''}"
           on:click={() => openThemeModal(theme)}
+          on:keydown={(e) => e.key === 'Enter' && openThemeModal(theme)}
+          role="button"
+          tabindex="0"
+          aria-label={`Open ${theme.name} theme details`}
         >
           {#if !imgErrors[i]}
             <img
@@ -163,6 +316,18 @@
           </div>
           {#if currentThemeName === theme.name.toLowerCase()}
             <div class="mt-2 px-2 py-1 text-xs bg-accent text-white rounded-full">Active</div>
+          {/if}
+          {#if isExternalTheme(theme.name)}
+            <button
+              class="mt-2 px-3 py-1 text-xs bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors duration-200"
+              on:click={(e) => {
+                e.stopPropagation();
+                uninstallTheme(theme.name);
+              }}
+              aria-label={`Uninstall ${theme.name} theme`}
+            >
+              Uninstall
+            </button>
           {/if}
         </div>
       {/each}
@@ -328,6 +493,17 @@
               >
                 Apply Theme
               </button>
+              {#if selectedTheme && isExternalTheme(selectedTheme.name)}
+                <button
+                  class="px-4 py-2 rounded-lg font-semibold text-white bg-red-500 hover:bg-red-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-400 active:scale-95"
+                  on:click={() => {
+                    if (selectedTheme) uninstallTheme(selectedTheme.name);
+                    closeThemeModal();
+                  }}
+                >
+                  Uninstall Theme
+                </button>
+              {/if}
               {#if currentThemeName !== 'default'}
                 <button
                   class="px-4 py-2 rounded-lg font-semibold text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600 active:scale-95"
@@ -341,6 +517,83 @@
         </div>
       </div>
     {/if}
+  {/if}
+
+  {#if showGetMoreThemesModal}
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden animate-fade-in-up relative flex flex-col">
+        <button
+          class="absolute top-4 right-4 text-xl text-white bg-black/30 rounded-full w-8 h-8 flex items-center justify-center hover:bg-black/60 transition"
+          on:click={() => showGetMoreThemesModal = false}
+          aria-label="Close"
+        >
+          ×
+        </button>
+        <div class="p-8 flex-1 overflow-y-auto">
+          <h2 class="text-2xl font-bold mb-6 text-slate-800 dark:text-white">Get More Themes</h2>
+          
+          {#if githubLoading}
+            <div class="flex justify-center items-center py-16">
+              <div class="flex flex-col gap-4 items-center">
+                <div class="w-8 h-8 rounded-full border-4 animate-spin border-accent/30 border-t-accent"></div>
+                <p class="text-sm text-slate-600 dark:text-slate-400">Loading themes from GitHub...</p>
+              </div>
+            </div>
+          {:else if githubError}
+            <div class="text-red-500 text-center py-8">{githubError}</div>
+          {:else if githubThemes.length === 0}
+            <div class="text-center py-8 text-slate-600 dark:text-slate-400">
+              <div class="max-w-md mx-auto">
+                <div class="mb-4">
+                  <svg class="w-16 h-16 mx-auto text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                  </svg>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">No themes found</h3>
+                <p class="text-sm mb-4">The GitHub repository doesn't exist or contains no themes.</p>
+                <div class="bg-slate-100 dark:bg-slate-800 rounded-lg p-4 text-left">
+                  <p class="text-sm font-medium mb-2">To add themes:</p>
+                  <ol class="text-xs space-y-1">
+                    <li>1. Create a GitHub repository named "desqta-themes"</li>
+                    <li>2. Add theme folders with manifest.json files</li>
+                    <li>3. Update the GITHUB_REPO constant in the code</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          {:else}
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {#each githubThemes as theme, i (theme.name)}
+                <div class="rounded-xl shadow-lg p-6 flex flex-col items-center bg-white/10 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 transition-all duration-200">
+                  <img
+                    src={theme.thumbnailUrl}
+                    alt={theme.name + ' preview'}
+                    class="w-16 h-16 rounded-full mb-4 border-2 object-cover"
+                    style="border-color: {theme.customProperties.primaryColor}; background: {theme.customProperties.backgroundColor}"
+                    on:error={() => {
+                      // Handle image error
+                    }}
+                  />
+                  <div class="font-semibold text-lg mb-2">{theme.name}</div>
+                  <div class="text-sm text-slate-500 dark:text-slate-400 mb-4 text-center">{theme.description}</div>
+                  <div class="flex gap-2 items-center text-xs text-slate-400 mb-4">
+                    <span>v{theme.version}</span>
+                    <span>•</span>
+                    <span>by {theme.author}</span>
+                  </div>
+                  <button
+                    class="px-4 py-2 rounded-lg font-semibold text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent accent-bg hover:accent-bg-hover active:scale-95"
+                    on:click={() => handleDownloadTheme(theme)}
+                  >
+                    Download & Apply
+                  </button>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      </div>
+    </div>
   {/if}
 </div>
 
