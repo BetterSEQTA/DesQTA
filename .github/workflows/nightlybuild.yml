@@ -21,7 +21,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
+          
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -30,7 +30,11 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-
+        
+      - name: Install zip (Windows)
+        if: runner.os == 'Windows'
+        run: choco install zip -y
+        
       - name: Build app
         run: npm run tauri build
 
@@ -76,3 +80,4 @@ jobs:
           files: nightly-tauri-build-${{ matrix.os }}-${{ github.ref_name }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
