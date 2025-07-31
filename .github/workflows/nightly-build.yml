@@ -1,0 +1,69 @@
+name: Nightly Build
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Every day at midnight UTC
+  workflow_dispatch:
+
+jobs:
+  nightly-build:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    env:
+      TZ: "UTC"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Insert your build steps here. For example:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # Save build artifact - adjust path as needed for your project
+      - name: Archive build output
+        run: |
+          mkdir -p nightly_artifacts
+          cp -r ./dist ./nightly_artifacts/
+      - name: Create branch name artifact
+        run: |
+          echo "${GITHUB_REF#refs/heads/}" > nightly_artifacts/branch.txt
+
+      - name: Set build time
+        id: set_time
+        run: echo "time=$(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_OUTPUT
+
+      - name: Package nightly build
+        run: |
+          tar -czf nightly-build-${GITHUB_REF##*/}.tar.gz -C nightly_artifacts .
+      
+      # Create or update the prerelease with tag "nightly release"
+      - name: Create or update nightly prerelease
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly-release
+          name: Nightly Release
+          body: |
+            This release is a nightly release, It will be unstable compared to the official releases, use with caution!
+
+            Last build successfully completed at ${{ steps.set_time.outputs.time }} UTC
+          prerelease: true
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload nightly build artifact
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly-release
+          files: nightly-build-${GITHUB_REF##*/}.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
