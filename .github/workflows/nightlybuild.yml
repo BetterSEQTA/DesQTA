@@ -3,6 +3,9 @@ name: Nightly Build
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   nightly-build:
     runs-on: ubuntu-latest
