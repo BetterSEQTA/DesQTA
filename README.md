@@ -8,7 +8,7 @@
 </p>
 
 - [Features](#features)
-- [Nightly Builds](#nightly-builds)
+- [Weekly Builds](#weekly-builds)
 - [Full Releases](#full-releases)
 - [Getting Started](#getting-started)
   - [Building For Production](#building-for-production)
@@ -38,9 +38,9 @@
   - Utilizes Tailwind CSS for styling.
   - Ensures a responsive and modern UI across different devices.
 
-## Nightly Builds
+## Weekly Builds
 Nightly builds are available under the releases tab, tagged with nightly-release.   
-[Quick access link](https://github.com/StroepWafel/DesQTA/releases/tag/nightly-release)
+[Quick access link](https://github.com/BetterSEQTA/DesQTA/actions/workflows/nightlybuild.yml)
 
 ## Full Releases
 Full Releases are available under the releases tab.  
