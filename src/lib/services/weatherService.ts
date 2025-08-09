@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { cache } from '../../utils/cache';
+import { logger } from '../../utils/logger';
 
 export interface WeatherData {
   temperature: number;
@@ -17,8 +18,13 @@ export interface WeatherSettings {
 
 export const weatherService = {
   async loadWeatherSettings(): Promise<WeatherSettings> {
+    logger.debug('weatherService', 'loadWeatherSettings', 'Loading weather settings');
+    
     try {
       const settings = await invoke<WeatherSettings>('get_settings');
+      logger.debug('weatherService', 'loadWeatherSettings', 'Weather settings loaded successfully', { 
+        enabled: settings.weather_enabled 
+      });
       return {
         weather_enabled: settings.weather_enabled ?? false,
         weather_city: settings.weather_city ?? '',
@@ -26,6 +32,7 @@ export const weatherService = {
         force_use_location: settings.force_use_location ?? false,
       };
     } catch (e) {
+      logger.error('weatherService', 'loadWeatherSettings', `Failed to load weather settings: ${e}`, { error: e });
       return {
         weather_enabled: false,
         weather_city: '',

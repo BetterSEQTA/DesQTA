@@ -6,6 +6,7 @@ export interface ThemeManifest {
   description: string;
   author: string;
   license: string;
+  category?: string;
   compatibility: {
     minVersion: string;
     maxVersion: string;
@@ -79,21 +80,30 @@ class ThemeService {
   }
 
   async loadThemeManifest(themeName: string): Promise<ThemeManifest> {
-    // For now, load from local themes directory
-    const manifestPath = `/themes/${themeName}/theme-manifest.json`;
-    
     try {
-      const response = await fetch(manifestPath);
-      if (!response.ok) {
-        throw new Error(`Failed to load theme manifest: ${response.statusText}`);
-      }
-      
-      const manifest: ThemeManifest = await response.json();
+      // First try to load from backend (supports both static and custom themes)
+      const manifest = await invoke<ThemeManifest>('load_theme_manifest', { themeName });
       this.loadedThemes.set(themeName, manifest);
       return manifest;
-    } catch (error) {
-      console.error('Error loading theme manifest:', error);
-      throw error;
+    } catch (backendError) {
+      console.warn('Backend theme loading failed, trying static fallback:', backendError);
+      
+      // Fallback to static themes directory
+      const manifestPath = `/themes/${themeName}/theme-manifest.json`;
+      
+      try {
+        const response = await fetch(manifestPath);
+        if (!response.ok) {
+          throw new Error(`Failed to load theme manifest: ${response.statusText}`);
+        }
+        
+        const manifest: ThemeManifest = await response.json();
+        this.loadedThemes.set(themeName, manifest);
+        return manifest;
+      } catch (staticError) {
+        console.error('Error loading theme manifest from static:', staticError);
+        throw staticError;
+      }
     }
   }
 
@@ -187,8 +197,13 @@ class ThemeService {
   }
 
   async getAvailableThemes(): Promise<string[]> {
-    // For now, return built-in themes
-    return ['default', 'sunset', 'light'];
+    try {
+      return await invoke<string[]>('get_available_themes');
+    } catch (error) {
+      console.error('Failed to get available themes:', error);
+      // Fallback to built-in themes
+      return ['default', 'sunset', 'light', 'mint', 'grape', 'midnight', 'bubblegum', 'solarized', 'glass', 'aero'];
+    }
   }
 
   async getCurrentTheme(): Promise<string> {
@@ -233,6 +248,146 @@ class ThemeService {
 
   public setThemeFonts(fonts: ThemeManifest['fonts']): void {
     this.loadThemeFonts(fonts);
+  }
+
+  // Custom theme management methods
+  async saveCustomTheme(themeName: string, themeData: any): Promise<void> {
+    try {
+      await invoke('save_custom_theme', { themeName, themeData });
+      // Clear cached themes to force reload
+      this.loadedThemes.clear();
+    } catch (error) {
+      console.error('Failed to save custom theme:', error);
+      throw error;
+    }
+  }
+
+  async deleteCustomTheme(themeName: string): Promise<void> {
+    try {
+      await invoke('delete_custom_theme', { themeName });
+      // Remove from cache
+      this.loadedThemes.delete(themeName);
+    } catch (error) {
+      console.error('Failed to delete custom theme:', error);
+      throw error;
+    }
+  }
+
+  async importThemeFromFile(filePath: string): Promise<string> {
+    try {
+      const themeName = await invoke<string>('import_theme_from_file', { filePath });
+      // Clear cached themes to force reload
+      this.loadedThemes.clear();
+      return themeName;
+    } catch (error) {
+      console.error('Failed to import theme from file:', error);
+      throw error;
+    }
+  }
+
+  async getThemesDirectoryPath(): Promise<string> {
+    try {
+      return await invoke<string>('get_themes_directory_path');
+    } catch (error) {
+      console.error('Failed to get themes directory path:', error);
+      throw error;
+    }
+  }
+
+  // Enhanced theme loading with better error handling and caching
+  async loadThemeWithFallback(themeName: string): Promise<void> {
+    try {
+      await this.loadTheme(themeName);
+    } catch (error) {
+      console.error(`Failed to load theme '${themeName}', falling back to default:`, error);
+      await this.loadTheme('default');
+    }
+  }
+
+  // Validate theme data structure
+  validateThemeData(themeData: any): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    
+    if (!themeData.name || typeof themeData.name !== 'string') {
+      errors.push('Theme name is required and must be a string');
+    }
+    
+    if (!themeData.displayName || typeof themeData.displayName !== 'string') {
+      errors.push('Display name is required and must be a string');
+    }
+    
+    if (!themeData.version || typeof themeData.version !== 'string') {
+      errors.push('Version is required and must be a string');
+    }
+    
+    if (!themeData.customProperties || typeof themeData.customProperties !== 'object') {
+      errors.push('Custom properties are required and must be an object');
+    } else {
+      const requiredProps = ['--background-color', '--text-color', '--accent-color'];
+      for (const prop of requiredProps) {
+        if (!themeData.customProperties[prop]) {
+          errors.push(`Required property '${prop}' is missing`);
+        }
+      }
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  // Generate theme preview CSS for testing
+  generatePreviewCSS(themeData: any): string {
+    let css = ':root {\n';
+    
+    if (themeData.customProperties) {
+      for (const [key, value] of Object.entries(themeData.customProperties)) {
+        css += `  ${key}: ${value};\n`;
+      }
+    }
+    
+    if (themeData.fonts && themeData.features?.customFonts) {
+      css += `  --font-primary: ${themeData.fonts.primary};\n`;
+      css += `  --font-secondary: ${themeData.fonts.secondary};\n`;
+      css += `  --font-monospace: ${themeData.fonts.monospace};\n`;
+      css += `  --font-display: ${themeData.fonts.display};\n`;
+    }
+    
+    if (themeData.animations && themeData.features?.animations) {
+      css += `  --animation-duration: ${themeData.animations.duration};\n`;
+      css += `  --animation-easing: ${themeData.animations.easing};\n`;
+      css += `  --animation-scale: ${themeData.animations.scale};\n`;
+    }
+    
+    css += '}\n';
+    
+    return css;
+  }
+
+  // Apply temporary theme for preview without saving
+  applyTemporaryTheme(themeData: any): void {
+    const css = this.generatePreviewCSS(themeData);
+    
+    // Remove existing preview styles
+    const existingPreview = document.getElementById('theme-preview-styles');
+    if (existingPreview) {
+      existingPreview.remove();
+    }
+    
+    // Add new preview styles
+    const style = document.createElement('style');
+    style.id = 'theme-preview-styles';
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+
+  // Remove temporary theme preview
+  removeTemporaryTheme(): void {
+    const existingPreview = document.getElementById('theme-preview-styles');
+    if (existingPreview) {
+      existingPreview.remove();
+    }
   }
 }
 

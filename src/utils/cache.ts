@@ -1,3 +1,5 @@
+import { logger } from './logger';
+
 interface CacheItem<T> {
   data: T;
   timestamp: number;
@@ -47,13 +49,18 @@ class Cache {
    */
   public get<T>(key: string): T | null {
     const item = this.cache.get(key);
-    if (!item) return null;
+    if (!item) {
+      logger.debug('cache', 'get', `Cache miss for key: ${key}`);
+      return null;
+    }
 
     if (Date.now() > item.timestamp) {
+      logger.debug('cache', 'get', `Cache expired for key: ${key}`);
       this.cache.delete(key);
       return null;
     }
 
+    logger.debug('cache', 'get', `Cache hit for key: ${key}`);
     return item.data as T;
   }
 
