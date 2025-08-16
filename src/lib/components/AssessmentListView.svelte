@@ -1,5 +1,7 @@
 <script lang="ts">
   import AssessmentCard from './AssessmentCard.svelte';
+  import VirtualList from './VirtualList.svelte';
+  import VirtualAssessmentCard from './VirtualAssessmentCard.svelte';
 
   interface Assessment {
     id: number;
@@ -25,6 +27,9 @@
   }
 
   let { assessments, subjects, activeSubjects }: Props = $props();
+  
+  // Assessment card height for virtual scrolling (estimated)
+  const ASSESSMENT_CARD_HEIGHT = 120;
 
   function scrollToSubject(event: MouseEvent, subjectCode: string) {
     event.preventDefault();
@@ -92,9 +97,20 @@
           </div>
         </div>
         <div class="p-4 space-y-4">
-          {#each assessments.filter((a) => a.code === subject.code) as assessment}
-            <AssessmentCard {assessment} />
-          {/each}
+          {#if assessments.filter((a) => a.code === subject.code).length > 20}
+            <VirtualList
+              items={assessments.filter((a) => a.code === subject.code)}
+              itemHeight={ASSESSMENT_CARD_HEIGHT}
+              containerHeight={600}
+              keyFunction={(item) => item.id}
+              let:item>
+              <VirtualAssessmentCard {item} index={0} />
+            </VirtualList>
+          {:else}
+            {#each assessments.filter((a) => a.code === subject.code) as assessment}
+              <AssessmentCard {assessment} />
+            {/each}
+          {/if}
         </div>
       </div>
     {/each}

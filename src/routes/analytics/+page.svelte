@@ -205,8 +205,9 @@
       showGrabData = false;
       processData();
     } catch (e) {
-      console.error('Error loading analytics:', e);
-      error = e instanceof Error ? e.message : 'Failed to load analytics data';
+      // Do not use console.error here to avoid global error page; show local recovery UI instead
+      console.warn('Analytics: no local analytics file found or failed to parse. Prompting user to rebuild.');
+      error = 'No analytics data found. Click the button below to download and build your assessment analytics.';
       showGrabData = true;
     } finally {
       loading = false;

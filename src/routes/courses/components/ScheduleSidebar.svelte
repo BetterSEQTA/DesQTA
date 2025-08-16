@@ -1,6 +1,7 @@
 <script lang="ts">
   import { formatLessonDate, formatTime, isLessonReleased } from '../utils';
   import type { TermSchedule, Lesson, CoursePayload } from '../types';
+  import { onMount, createEventDispatcher } from 'svelte';
 
   let {
     schedule = [],
@@ -9,18 +10,35 @@
     coursePayload = null,
     onSelectLesson,
     onSelectOverview,
-  }: {
-    schedule?: TermSchedule[];
-    selectedLesson?: Lesson | null;
-    showingOverview?: boolean;
-    coursePayload?: CoursePayload | null;
-    onSelectLesson: (data: {
-      termSchedule: TermSchedule;
-      lesson: Lesson;
-      lessonIndex: number;
-    }) => void;
-    onSelectOverview: () => void;
+    onClose,
+    closeOnMainSidebar = false
   } = $props();
+
+  const dispatch = createEventDispatcher();
+
+  let isMobile = $state(false);
+  onMount(() => {
+    const checkMobile = () => {
+      const tauri_platform = import.meta.env.TAURI_ENV_PLATFORM;
+      if (tauri_platform == "ios" || tauri_platform == "android") {
+        isMobile = true;
+      } else {
+        isMobile = false;
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  });
+
+  // Add a reactive prop to listen for main sidebar close
+  $effect(() => {
+    if (closeOnMainSidebar && isMobile) {
+      dispatch('close');
+    }
+  });
 
   let filteredSchedule = $derived(
     schedule
@@ -52,7 +70,7 @@
               (ts) => ts.t === termSchedule.t && ts.w === termSchedule.w,
             );
             if (originalTermSchedule) {
-              const originalLessonIndex = originalTermSchedule.l.findIndex((l) => l === lesson);
+              const originalLessonIndex = originalTermSchedule.l.findIndex((l: Lesson) => l === lesson);
               if (originalLessonIndex >= 0) {
                 return {
                   termSchedule: originalTermSchedule,
@@ -79,7 +97,7 @@
             (ts) => ts.t === termSchedule.t && ts.w === termSchedule.w,
           );
           if (originalTermSchedule) {
-            const originalLessonIndex = originalTermSchedule.l.findIndex((l) => l === lesson);
+            const originalLessonIndex = originalTermSchedule.l.findIndex((l: Lesson) => l === lesson);
             if (originalLessonIndex >= 0) {
               return {
                 termSchedule: originalTermSchedule,
@@ -102,7 +120,7 @@
           (ts) => ts.t === termSchedule.t && ts.w === termSchedule.w,
         );
         if (originalTermSchedule) {
-          const originalLessonIndex = originalTermSchedule.l.findIndex((l) => l === lesson);
+          const originalLessonIndex = originalTermSchedule.l.findIndex((l: Lesson) => l === lesson);
           if (originalLessonIndex >= 0) {
             lastLesson = {
               termSchedule: originalTermSchedule,
@@ -157,9 +175,31 @@
 </script>
 
 <aside
-  class="flex flex-col w-64 h-[calc(100vh-4rem)] border-r bg-white/80 dark:bg-slate-800/50 backdrop-blur-sm border-slate-300/50 dark:border-slate-700/50">
+  class="flex flex-col w-64 h-[calc(100vh-4rem)] border-r bg-white/80 dark:bg-slate-800/50 backdrop-blur-sm border-slate-300/50 dark:border-slate-700/50 {isMobile ? 'fixed inset-0 z-40 w-full' : ''}">
   <div class="px-4 py-3 border-b border-slate-300/50 dark:border-slate-700/50 shrink-0">
-    <h3 class="text-lg font-bold text-slate-900 dark:text-white">Course Content</h3>
+    <div class="flex justify-between items-center">
+      {#if isMobile}
+        <div class="flex flex-col items-center w-full mb-2">
+          <button
+            onclick={() => dispatch('close')}
+            class="mb-2 p-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 transform hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 text-2xl"
+            aria-label="Back"
+          >
+            <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+        </div>
+      {/if}
+      <h3 class="text-lg font-bold text-slate-900 dark:text-white">Course Content</h3>
+      {#if isMobile}
+        <button
+          onclick={() => dispatch('close')}
+          class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2"
+          aria-label="Close sidebar"
+        >
+          ✕
+        </button>
+      {/if}
+    </div>
   </div>
   <div class="overflow-y-auto flex-1 min-h-0">
     <div

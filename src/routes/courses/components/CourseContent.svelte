@@ -207,9 +207,9 @@
 
   onMount(async () => {
     try {
-      const settings = await invoke<any>('get_settings');
-      aiIntegrationsEnabled = settings.ai_integrations_enabled ?? false;
-      lessonSummaryAnalyserEnabled = settings.lesson_summary_analyser_enabled ?? true;
+      const subset = await invoke<any>('get_settings_subset', { keys: ['ai_integrations_enabled','lesson_summary_analyser_enabled'] });
+      aiIntegrationsEnabled = subset?.ai_integrations_enabled ?? false;
+      lessonSummaryAnalyserEnabled = subset?.lesson_summary_analyser_enabled ?? true;
       settingsLoaded = true;
     } catch (e) {
       aiIntegrationsEnabled = false;

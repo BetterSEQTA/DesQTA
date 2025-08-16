@@ -4,6 +4,8 @@
   import { Icon } from 'svelte-hero-icons';
   import { MagnifyingGlass, Funnel, User, AcademicCap, MapPin } from 'svelte-hero-icons';
   import { invoke } from '@tauri-apps/api/core';
+  import { cache } from '../../utils/cache';
+  import { getWithIdbFallback, setIdb } from '$lib/services/idbCache';
 
   interface Student {
     id: number;
@@ -47,8 +49,8 @@
 
   async function checkSensitiveInfoHider() {
     try {
-      const settings = await invoke<{ dev_sensitive_info_hider?: boolean }>('get_settings');
-      devSensitiveInfoHider = settings.dev_sensitive_info_hider ?? false;
+      const subset = await invoke<any>('get_settings_subset', { keys: ['dev_sensitive_info_hider'] });
+      devSensitiveInfoHider = subset?.dev_sensitive_info_hider ?? false;
     } catch (e) {
       devSensitiveInfoHider = false;
     }
@@ -58,6 +60,20 @@
     loading = true;
     error = null;
     try {
+      const cacheKey = 'directory_students_all';
+      const cached = cache.get<Student[]>(cacheKey) || await getWithIdbFallback<Student[]>(cacheKey, cacheKey, () => cache.get<Student[]>(cacheKey));
+      if (cached) {
+        students = cached;
+        // hydrate filters from cached too
+        const uniqueYears = [...new Set(students.map(s => s.year))].sort();
+        const uniqueSubSchools = [...new Set(students.map(s => s.sub_school))].sort();
+        const uniqueHouses = [...new Set(students.map(s => s.house))].sort();
+        const uniqueCampuses = [...new Set(students.map(s => s.campus))].sort();
+        years = uniqueYears; subSchools = uniqueSubSchools; houses = uniqueHouses; campuses = uniqueCampuses;
+        loading = false;
+        return;
+      }
+
       const res = await seqtaFetch('/seqta/student/load/message/people', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
@@ -102,6 +118,11 @@
       subSchools = uniqueSubSchools;
       houses = uniqueHouses;
       campuses = uniqueCampuses;
+
+      // Cache mem + IDB
+      cache.set(cacheKey, students, 60);
+      console.info('[IDB] directory cached (mem+idb)', { count: students.length });
+      await setIdb(cacheKey, students);
       
       console.log('Loaded students:', students.length, 'students');
       console.log('Sample student:', students[0]);

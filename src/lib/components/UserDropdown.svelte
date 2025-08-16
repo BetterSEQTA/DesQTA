@@ -61,8 +61,8 @@
 
   onMount(async () => {
     try {
-      const settings = await invoke<{ dev_sensitive_info_hider?: boolean }>('get_settings');
-      devSensitiveInfoHider = settings.dev_sensitive_info_hider ?? false;
+      const subset = await invoke<any>('get_settings_subset', { keys: ['dev_sensitive_info_hider'] });
+      devSensitiveInfoHider = subset?.dev_sensitive_info_hider ?? false;
       if (devSensitiveInfoHider) {
         randomAvatarUrl = getRandomDicebearAvatar();
       }
@@ -70,6 +70,18 @@
       devSensitiveInfoHider = false;
     }
   });
+
+  // Refresh avatar if the setting flips while open
+  async function refreshSensitiveAvatar() {
+    try {
+      const subset = await invoke<any>('get_settings_subset', { keys: ['dev_sensitive_info_hider'] });
+      const newVal = subset?.dev_sensitive_info_hider ?? false;
+      if (newVal && !devSensitiveInfoHider) {
+        randomAvatarUrl = getRandomDicebearAvatar();
+      }
+      devSensitiveInfoHider = newVal;
+    } catch {}
+  }
 
   // Close dropdown when userInfo becomes undefined (logout)
   $effect(() => {

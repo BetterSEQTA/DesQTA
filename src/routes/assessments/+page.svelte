@@ -5,6 +5,7 @@
   import { notify } from '../../utils/notify';
   import { invoke } from '@tauri-apps/api/core';
   import AssessmentViewTabs from '../../lib/components/AssessmentViewTabs.svelte';
+  import { getWithIdbFallback, setIdb } from '$lib/services/idbCache';
   import YearFilter from '../../lib/components/YearFilter.svelte';
   import GradePredictions from '../../lib/components/GradePredictions.svelte';
   import AssessmentBoardView from '../../lib/components/AssessmentBoardView.svelte';
@@ -44,7 +45,7 @@
 
   async function loadLessonColours() {
     // Check cache first
-    const cachedColours = cache.get<any[]>('lesson_colours');
+    const cachedColours = cache.get<any[]>('lesson_colours') || await getWithIdbFallback<any[]>('lesson_colours', 'lesson_colours', () => cache.get<any[]>('lesson_colours'));
     if (cachedColours) {
       lessonColours = cachedColours;
       return lessonColours;
@@ -58,6 +59,7 @@
     lessonColours = JSON.parse(res).payload;
     // Cache for 10 minutes
     cache.set('lesson_colours', lessonColours, 10);
+    await setIdb('lesson_colours', lessonColours);
     return lessonColours;
   }
 
@@ -72,7 +74,13 @@
         allSubjects: any[];
         filters: Record<string, boolean>;
         years: number[];
-      }>('assessments_overview_data');
+      }>('assessments_overview_data') || await getWithIdbFallback<{
+        assessments: any[];
+        subjects: any[];
+        allSubjects: any[];
+        filters: Record<string, boolean>;
+        years: number[];
+      }>('assessments_overview_data', 'assessments_overview_data', () => cache.get('assessments_overview_data'));
 
       if (cachedData) {
         upcomingAssessments = cachedData.assessments;
@@ -187,6 +195,14 @@
         },
         10,
       );
+      console.info('[IDB] assessments_overview_data cached (mem+idb)', { assessments: upcomingAssessments.length, subjects: activeSubjects.length });
+      await setIdb('assessments_overview_data', {
+        assessments: upcomingAssessments,
+        subjects: activeSubjects,
+        allSubjects: allSubjects,
+        filters: subjectFilters,
+        years: availableYears,
+      });
     } catch (e) {
       console.error('Error loading assessments:', e);
     } finally {
@@ -276,9 +292,9 @@
 
   onMount(async () => {
     try {
-      const settings = await invoke<any>('get_settings');
-      aiIntegrationsEnabled = settings.ai_integrations_enabled ?? false;
-      gradeAnalyserEnabled = settings.grade_analyser_enabled ?? true;
+      const subset = await invoke<any>('get_settings_subset', { keys: ['ai_integrations_enabled','grade_analyser_enabled'] });
+      aiIntegrationsEnabled = subset?.ai_integrations_enabled ?? false;
+      gradeAnalyserEnabled = subset?.grade_analyser_enabled ?? true;
     } catch (e) {
       aiIntegrationsEnabled = false;
       gradeAnalyserEnabled = true;

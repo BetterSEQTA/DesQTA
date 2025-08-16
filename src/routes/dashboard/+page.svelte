@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { seqtaFetch } from '../../utils/netUtil';
+  import { cache } from '../../utils/cache';
+  import { getWithIdbFallback, setIdb } from '$lib/services/idbCache';
   import { writable } from 'svelte/store';
 
   interface HomeworkItem {
@@ -52,13 +54,23 @@
     try {
       loading = true;
       error = null;
-      console.log('Making POST request to homework endpoint...');
+      const cacheKey = 'dashboard_homework';
+      const cached = cache.get<any>(cacheKey) || await getWithIdbFallback<any>(cacheKey, cacheKey, () => cache.get<any>(cacheKey));
+      if (cached) {
+        homeworkData = cached;
+        loading = false;
+        return;
+      }
+
       const response = await seqtaFetch('/seqta/student/dashlet/summary/homework', {
         method: 'POST',
         body: {},
         params: { majhvjju: '' },
       });
       homeworkData = JSON.parse(response);
+      cache.set(cacheKey, homeworkData, 15);
+      console.info('[IDB] dashboard homework cached (mem+idb)');
+      await setIdb(cacheKey, homeworkData);
     } catch (e: any) {
       console.error('Error details:', e);
       error = e.toString();
