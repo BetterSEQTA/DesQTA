@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon } from 'svelte-hero-icons';
-  import { Plus, Inbox, PaperAirplane, Trash, Star, Rss } from 'svelte-hero-icons';
+  import { Plus, Inbox, PaperAirplane, Trash, Star, Rss, ChatBubbleLeftRight } from 'svelte-hero-icons';
   import { getRSS } from '../../../utils/netUtil';
   import { onMount } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
@@ -21,11 +21,9 @@
       { name: 'Starred', icon: Star, id: 'starred' },
       { name: 'Trash', icon: Trash, id: 'trash' },
     ];
-    const feeds = await invoke<{
-      feeds: Feed[];
-    }>('get_settings');
-    console.log(feeds.feeds);
-    for (let item of feeds.feeds) {
+    const subset = await invoke<any>('get_settings_subset', { keys: ['feeds'] });
+    console.log(subset?.feeds);
+    for (let item of (subset?.feeds || [])) {
       console.log(item.url);
       let title = await getRSS(item.url);
       folders.push({
@@ -49,7 +47,6 @@
       <span>Compose</span>
     </button>
   </div>
-
   {#await rssFeeds}
     <p>Loading Data...</p>
   {:then folders}
@@ -57,10 +54,10 @@
       {#each folders as folder}
         <button
           class="w-full flex items-center gap-3 px-4 sm:px-6 py-2.5 text-left text-sm sm:text-base font-medium rounded-lg transition-all duration-200 relative group
-              {selectedFolder === folder.name
-            ? 'accent-bg text-white border-l-4 accent-bg pl-[1.25rem] shadow-md'
-            : 'border-l-4 border-transparent text-slate-700 dark:text-white hover:bg-accent-100 dark:hover:bg-accent-700 hover:scale-[1.02]'}
-              focus:outline-none focus:ring-2 accent-ring"
+            {selectedFolder === folder.name
+              ? 'accent-bg text-white border-l-4 accent-bg pl-[1.25rem] shadow-md'
+              : 'border-l-4 border-transparent text-slate-700 dark:text-white hover:bg-accent-100 dark:hover:bg-accent-700 hover:scale-[1.02]'}
+            focus:outline-none focus:ring-2 accent-ring"
           onclick={() => openFolder(folder)}>
           <Icon src={folder.icon} class="w-5 h-5" />
           <span>{folder.name}</span>

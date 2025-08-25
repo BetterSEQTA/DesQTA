@@ -1,5 +1,8 @@
 <script lang="ts">
   import AssessmentCard from './AssessmentCard.svelte';
+  import VirtualList from './VirtualList.svelte';
+  import VirtualAssessmentCard from './VirtualAssessmentCard.svelte';
+  import { Card, Badge } from '$lib/components/ui';
 
   interface Assessment {
     id: number;
@@ -25,6 +28,9 @@
   }
 
   let { assessments, subjects, activeSubjects }: Props = $props();
+  
+  // Assessment card height for virtual scrolling (estimated)
+  const ASSESSMENT_CARD_HEIGHT = 120;
 
   function scrollToSubject(event: MouseEvent, subjectCode: string) {
     event.preventDefault();
@@ -70,10 +76,12 @@
   <!-- Main Content -->
   <div class="flex-1 space-y-6">
     {#each subjects.filter(subject => assessments.some(a => a.code === subject.code)) as subject}
-      <div
-        id="subject-{subject.code}"
-        class="overflow-hidden rounded-xl border backdrop-blur-sm bg-slate-100/80 dark:bg-slate-800/50 border-slate-300/50 dark:border-slate-700/50">
-        <div class="px-4 py-4 border-b sm:px-6 border-slate-300/50 dark:border-slate-700/50">
+      <Card
+        variant="default"
+        padding="none"
+        class="overflow-hidden"
+      >
+        {#snippet header()}
           <div class="flex gap-3 items-center justify-between">
             <div class="flex gap-3 items-center">
               <div
@@ -85,18 +93,30 @@
               </h3>
               <span class="text-sm text-slate-600 dark:text-slate-400">({subject.code})</span>
               {#if activeSubjects && activeSubjects.some((as: any) => as.code === subject.code)}
-                <span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded">Active</span>
+                <Badge variant="success" size="xs">Active</Badge>
               {/if}
             </div>
-
           </div>
-        </div>
+        {/snippet}
+
         <div class="p-4 space-y-4">
-          {#each assessments.filter((a) => a.code === subject.code) as assessment}
-            <AssessmentCard {assessment} />
-          {/each}
+          {#if assessments.filter((a) => a.code === subject.code).length > 20}
+            <VirtualList
+              items={assessments.filter((a) => a.code === subject.code)}
+              itemHeight={ASSESSMENT_CARD_HEIGHT}
+              containerHeight={600}
+              keyFunction={(item) => item.id}>
+              {#snippet children({ item, index })}
+                <VirtualAssessmentCard {item} {index} />
+              {/snippet}
+            </VirtualList>
+          {:else}
+            {#each assessments.filter((a) => a.code === subject.code) as assessment}
+              <AssessmentCard {assessment} />
+            {/each}
+          {/if}
         </div>
-      </div>
+      </Card>
     {/each}
   </div>
 </div>
@@ -117,7 +137,7 @@
     }
   }
 
-  .highlight-subject {
+  :global(.highlight-subject) {
     animation: highlight 1.5s ease-out;
   }
 </style> 

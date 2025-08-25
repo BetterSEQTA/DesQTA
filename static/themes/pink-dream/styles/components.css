@@ -1,0 +1,356 @@
+/* Pink Girly Pop Theme - Component Styles */
+
+/* Cute button variations */
+.girly-btn-primary {
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 10px 20px;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.girly-btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s;
+}
+
+.girly-btn-primary:hover::before {
+  left: 100%;
+}
+
+.girly-btn-primary:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(255, 105, 180, 0.6);
+}
+
+.girly-btn-secondary {
+  background: linear-gradient(135deg, #ffb6c1 0%, #ffc0cb 100%);
+  color: #8b4874;
+  border: 2px solid #ff69b4;
+  border-radius: 20px;
+  padding: 8px 18px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.girly-btn-secondary:hover {
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  color: white;
+  transform: scale(1.05);
+}
+
+/* Cute card components */
+.girly-card-primary {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 182, 193, 0.5) 100%);
+  border: 2px solid rgba(255, 105, 180, 0.3);
+  border-radius: 20px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.girly-card-primary::before {
+  content: '✨';
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 1.2rem;
+  opacity: 0.7;
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+.girly-card-secondary {
+  background: rgba(255, 192, 203, 0.3);
+  border: 1px solid rgba(255, 105, 180, 0.2);
+  border-radius: 15px;
+  padding: 15px;
+  backdrop-filter: blur(5px);
+}
+
+/* Input field styles */
+.girly-input-primary {
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(255, 105, 180, 0.3);
+  border-radius: 15px;
+  padding: 12px 16px;
+  font-family: 'Nunito', sans-serif;
+  color: #8b4874;
+  transition: all 0.3s ease;
+}
+
+.girly-input-primary:focus {
+  border-color: #ff69b4;
+  box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.2);
+  outline: none;
+  transform: scale(1.02);
+}
+
+.girly-input-search {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(255, 105, 180, 0.3);
+  border-radius: 25px;
+  padding: 10px 20px 10px 45px;
+  font-family: 'Nunito', sans-serif;
+  position: relative;
+}
+
+.girly-input-search::before {
+  content: '🔍';
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.1rem;
+}
+
+/* Badge and tag styles */
+.girly-badge-new {
+  background: linear-gradient(135deg, #ff1493 0%, #ff69b4 100%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(255, 105, 180, 0.3);
+  position: relative;
+}
+
+.girly-badge-new::before {
+  content: '✨ NEW ✨';
+}
+
+.girly-badge-popular {
+  background: linear-gradient(135deg, #ffd700 0%, #ff69b4 100%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+}
+
+.girly-badge-popular::before {
+  content: '🔥 HOT 🔥';
+}
+
+/* Navigation styles */
+.girly-nav {
+  background: linear-gradient(135deg, rgba(255, 182, 193, 0.8) 0%, rgba(255, 105, 180, 0.6) 100%);
+  backdrop-filter: blur(15px);
+  border-bottom: 2px solid rgba(255, 105, 180, 0.3);
+  padding: 10px 0;
+}
+
+.girly-nav-link {
+  color: #8b4874;
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.girly-nav-link:hover {
+  background: rgba(255, 105, 180, 0.2);
+  color: #ff1493;
+  transform: scale(1.05);
+}
+
+.girly-nav-link.active {
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+}
+
+.girly-nav-link.active::after {
+  content: '💖';
+  margin-left: 8px;
+  animation: floating-hearts 2s ease-in-out infinite;
+}
+
+/* Modal styles */
+.girly-modal-overlay {
+  background: rgba(255, 105, 180, 0.3);
+  backdrop-filter: blur(5px);
+}
+
+.girly-modal-content {
+  background: linear-gradient(135deg, rgba(255, 240, 248, 0.95) 0%, rgba(255, 182, 193, 0.9) 100%);
+  border: 2px solid rgba(255, 105, 180, 0.3);
+  border-radius: 25px;
+  box-shadow: 0 20px 60px rgba(255, 105, 180, 0.3);
+  backdrop-filter: blur(20px);
+  padding: 30px;
+  position: relative;
+}
+
+.girly-modal-content::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #ff69b4, #ffb6c1, #ff1493, #ffc0cb);
+  border-radius: 25px;
+  z-index: -1;
+  animation: rainbow-border 3s ease-in-out infinite;
+}
+
+/* Table styles */
+.girly-table {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(255, 105, 180, 0.15);
+}
+
+.girly-table th {
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  color: white;
+  font-weight: 600;
+  padding: 15px;
+  text-align: left;
+}
+
+.girly-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid rgba(255, 105, 180, 0.1);
+}
+
+.girly-table tr:hover {
+  background: rgba(255, 105, 180, 0.05);
+}
+
+/* Progress bar */
+.girly-progress {
+  background: rgba(255, 182, 193, 0.3);
+  border-radius: 20px;
+  height: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.girly-progress-fill {
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  height: 100%;
+  border-radius: 20px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.girly-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Tooltip styles */
+.girly-tooltip {
+  background: linear-gradient(135deg, #8b4874 0%, #ff69b4 100%);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  box-shadow: 0 4px 15px rgba(255, 105, 180, 0.3);
+  position: relative;
+}
+
+.girly-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #8b4874;
+}
+
+/* Checkbox styles */
+.girly-checkbox {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ff69b4;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.girly-checkbox:checked {
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  border-color: #ff1493;
+}
+
+.girly-checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+/* Switch toggle */
+.girly-switch {
+  width: 50px;
+  height: 25px;
+  background: rgba(255, 182, 193, 0.3);
+  border-radius: 25px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.girly-switch.active {
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+}
+
+.girly-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 21px;
+  height: 21px;
+  background: white;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.girly-switch.active::after {
+  left: 27px;
+  box-shadow: 0 2px 8px rgba(255, 105, 180, 0.3);
+}

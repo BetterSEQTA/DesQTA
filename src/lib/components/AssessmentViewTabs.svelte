@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { Tabs } from '$lib/components/ui';
+  import { ListBullet, Square3Stack3d, Calendar } from 'svelte-hero-icons';
+
   type ViewType = 'list' | 'board' | 'calendar';
 
   interface Props {
@@ -7,28 +10,17 @@
   }
 
   let { selectedTab, onTabChange }: Props = $props();
+
+  const tabs = [
+    { id: 'list', label: 'List View', icon: ListBullet },
+    { id: 'board', label: 'Board View', icon: Square3Stack3d },
+    { id: 'calendar', label: 'Calendar View', icon: Calendar }
+  ];
 </script>
 
-<div class="flex gap-2">
-  <button
-    class="px-3 sm:px-4 py-2 rounded-lg transition-all duration-300 text-sm sm:text-base {selectedTab === 'list'
-      ? 'accent-bg text-white shadow-lg accent-shadow'
-      : 'bg-slate-200/80 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:bg-slate-300/80 dark:hover:bg-slate-700/50'}"
-    onclick={() => onTabChange('list')}>
-    List View
-  </button>
-  <button
-    class="px-3 sm:px-4 py-2 rounded-lg transition-all duration-300 text-sm sm:text-base {selectedTab === 'board'
-      ? 'accent-bg text-white shadow-lg accent-shadow'
-      : 'bg-slate-200/80 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:bg-slate-300/80 dark:hover:bg-slate-700/50'}"
-    onclick={() => onTabChange('board')}>
-    Board View
-  </button>
-  <button
-    class="px-3 sm:px-4 py-2 rounded-lg transition-all duration-300 text-sm sm:text-base {selectedTab === 'calendar'
-      ? 'accent-bg text-white shadow-lg accent-shadow'
-      : 'bg-slate-200/80 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:bg-slate-300/80 dark:hover:bg-slate-700/50'}"
-    onclick={() => onTabChange('calendar')}>
-    Calendar View
-  </button>
-</div> 
+<Tabs
+  {tabs}
+  activeTab={selectedTab}
+  variant="pills"
+  onTabChange={(tabId) => onTabChange(tabId as ViewType)}
+/> 

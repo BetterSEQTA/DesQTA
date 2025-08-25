@@ -1,335 +1,325 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { invoke } from '@tauri-apps/api/core';
+  import { fly, fade, scale } from 'svelte/transition';
+  import { quintOut, cubicOut } from 'svelte/easing';
+
+  interface Subtask {
+    id: string;
+    title: string;
+    completed: boolean;
+  }
 
   interface TodoItem {
-    id: number;
-    text: string;
+    id: string;
+    title: string;
+    description?: string | null;
+    related_subject?: string | null;
+    related_assessment?: string | null;
+    due_date?: string | null; // YYYY-MM-DD
+    due_time?: string | null; // HH:MM
+    tags?: string[] | null;
+    subtasks?: Subtask[] | null;
     completed: boolean;
-    dueDate?: string;
-    subtasks?: { id: number; text: string; completed: boolean }[];
-    priority?: 'low' | 'medium' | 'high';
-    tags?: string[];
-    recurring?: 'none' | 'daily' | 'weekly' | 'monthly';
+    priority?: string | null; // low | medium | high
+    created_at?: string | null;
+    updated_at?: string | null;
   }
 
   let todos = $state<TodoItem[]>([]);
+  let loading = $state(true);
+  let error = $state<string | null>(null);
+  
+  // Animation state
+  let deletingTasks = $state<Set<string>>(new Set());
+  let completingTasks = $state<Set<string>>(new Set());
+
+  // New task form state
   let newTodoText = $state('');
   let newTodoDueDate = $state('');
   let newTodoPriority = $state<'low' | 'medium' | 'high'>('medium');
   let newTodoTags = $state(''); // comma-separated
-  let newTodoRecurring = $state<'none' | 'daily' | 'weekly' | 'monthly'>('none');
-  let newSubtasks = $state<{ id: number; text: string }[]>([]);
-  let newSubtaskText = $state('');
 
-  function addSubtask() {
-    if (newSubtaskText.trim()) {
-      newSubtasks = [...newSubtasks, { id: Date.now(), text: newSubtaskText.trim() }];
-      newSubtaskText = '';
+  function getPriorityStyles(priority?: string | null): string {
+    switch (priority) {
+      case 'high':
+        return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700';
+      case 'low':
+        return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/30 dark:text-gray-300 dark:border-gray-700';
     }
   }
 
-  function removeSubtask(id: number) {
-    newSubtasks = newSubtasks.filter((st) => st.id !== id);
+  async function loadTodos() {
+    try {
+      const result = await invoke<TodoItem[]>('load_todos');
+      todos = result ?? [];
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to load todos';
+    } finally {
+      loading = false;
+    }
+  }
+
+  async function saveTodos() {
+    try {
+      await invoke('save_todos', { todos });
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to save todos';
+    }
   }
 
   function addTodo() {
     if (newTodoText.trim()) {
-      todos = [
-        ...todos,
-        {
-          id: Date.now(),
-          text: newTodoText.trim(),
-          completed: false,
-          dueDate: newTodoDueDate || undefined,
-          subtasks: newSubtasks.map((st) => ({ ...st, completed: false })),
-          priority: newTodoPriority,
-          tags: newTodoTags
-            .split(',')
-            .map((t) => t.trim())
-            .filter(Boolean),
-          recurring: newTodoRecurring,
-        },
-      ];
+      const now = new Date().toISOString();
+      const newTask: TodoItem = {
+        id: crypto.randomUUID(),
+        title: newTodoText.trim(),
+        description: null,
+        related_subject: null,
+        related_assessment: null,
+        due_date: newTodoDueDate || null,
+        due_time: null,
+        tags: newTodoTags ? newTodoTags.split(',').map(t => t.trim()).filter(Boolean) : [],
+        subtasks: [],
+        completed: false,
+        priority: newTodoPriority,
+        created_at: now,
+        updated_at: now
+      };
+      todos = [newTask, ...todos];
       newTodoText = '';
       newTodoDueDate = '';
       newTodoPriority = 'medium';
       newTodoTags = '';
-      newTodoRecurring = 'none';
-      newSubtasks = [];
       saveTodos();
     }
   }
 
-  function toggleTodo(id: number) {
-    todos = todos.map((todo) => (todo.id === id ? { ...todo, completed: !todo.completed } : todo));
-    saveTodos();
-  }
-
-  function toggleSubtask(todoId: number, subtaskId: number) {
-    todos = todos.map((todo) =>
-      todo.id === todoId
-        ? {
-            ...todo,
-            subtasks: todo.subtasks?.map((st) =>
-              st.id === subtaskId ? { ...st, completed: !st.completed } : st,
-            ),
-          }
-        : todo,
-    );
-    saveTodos();
-  }
-
-  function deleteTodo(id: number) {
-    todos = todos.filter((todo) => todo.id !== id);
-    saveTodos();
-  }
-
-  function saveTodos() {
-    localStorage.setItem('todos', JSON.stringify(todos));
-  }
-
-  function loadTodos() {
-    const savedTodos = localStorage.getItem('todos');
-    if (savedTodos) {
-      todos = JSON.parse(savedTodos);
+  function toggleTodo(id: string) {
+    const todo = todos.find(t => t.id === id);
+    if (!todo) return;
+    
+    // If completing the task, add animation
+    if (!todo.completed) {
+      completingTasks.add(id);
+      completingTasks = completingTasks;
+      
+      // Brief delay for completion animation
+      setTimeout(() => {
+        completingTasks.delete(id);
+        completingTasks = completingTasks;
+      }, 500);
     }
+    
+    todos = todos.map(t => {
+      if (t.id === id) {
+        return { ...t, completed: !t.completed, updated_at: new Date().toISOString() } as TodoItem;
+      }
+      return t;
+    });
+    saveTodos();
   }
 
-  onMount(() => {
-    loadTodos();
+  function toggleSubtask(todoId: string, subtaskId: string) {
+    todos = todos.map(t => {
+      if (t.id === todoId) {
+        const list = (t.subtasks ?? []).map(s => s.id === subtaskId ? { ...s, completed: !s.completed } : s);
+        const completed = list.length > 0 && list.every(s => s.completed) ? true : t.completed;
+        return { ...t, subtasks: list, completed, updated_at: new Date().toISOString() } as TodoItem;
+      }
+      return t;
+    });
+    saveTodos();
+  }
+
+  function deleteTodo(id: string) {
+    // Add to deleting set for animation
+    deletingTasks.add(id);
+    deletingTasks = deletingTasks;
+    
+    // Delay actual removal to allow animation to play
+    setTimeout(() => {
+      todos = todos.filter(t => t.id !== id);
+      deletingTasks.delete(id);
+      deletingTasks = deletingTasks;
+      saveTodos();
+    }, 300);
+  }
+
+  onMount(async () => {
+    await loadTodos();
   });
 </script>
 
-<div
-  class="overflow-hidden relative rounded-2xl border shadow-xl backdrop-blur-sm bg-white/80 dark:bg-slate-800/30 border-slate-300/50 dark:border-slate-700/50">
-  <div
-    class="flex justify-between items-center px-4 py-3 bg-gradient-to-br border-b from-slate-100/70 dark:from-slate-800/70 to-slate-100/30 dark:to-slate-800/30 border-slate-300/50 dark:border-slate-700/50">
-    <h3 class="text-xl font-semibold text-slate-900 dark:text-white">Todo List</h3>
+<style>
+  /* Custom animation for task completion */
+  @keyframes completionPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); background-color: rgb(34 197 94 / 0.2); }
+    100% { transform: scale(1); }
+  }
+  
+  .completion-animation {
+    animation: completionPulse 0.5s ease-out;
+  }
+  
+  /* Smooth transitions for priority colors */
+  .priority-indicator {
+    transition: all 0.3s ease-in-out;
+  }
+  
+  /* Enhanced hover effects */
+  .enhanced-hover {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .enhanced-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+</style>
+
+<div class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-md" 
+     in:fade={{ duration: 400, easing: quintOut }}>
+  <!-- Header -->
+  <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700"
+       in:fly={{ y: -20, duration: 300, easing: quintOut }}>
+    <div>
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Quick Tasks</h3>
+      <p class="text-sm text-slate-600 dark:text-slate-300">{todos.filter(t => !t.completed).length} active tasks</p>
+    </div>
   </div>
-  <div class="p-6">
+
+  <div class="p-4 space-y-4">
+    <!-- Add New Task Form -->
     <form
       onsubmit={(e) => {
         e.preventDefault();
         addTodo();
       }}
-      class="mb-6">
-      <div
-        class="flex flex-col gap-6 p-4 rounded-lg border border-slate-300 bg-slate-100/60 dark:bg-slate-800/40 dark:border-slate-700">
-        <!-- Main Task -->
-        <div class="flex flex-col gap-4 items-stretch sm:flex-row">
-          <input
-            type="text"
-            bind:value={newTodoText}
-            placeholder="Add a new task..."
-            class="flex-1 px-4 py-2 bg-white rounded-lg border shadow-sm text-slate-900 border-slate-300 dark:bg-slate-900/60 dark:text-white dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-all duration-200" />
-          <input
-            type="date"
-            bind:value={newTodoDueDate}
-            class="px-4 py-2 bg-white rounded-lg border shadow-sm text-slate-900 border-slate-300 dark:bg-slate-900/60 dark:text-white dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-all duration-200" />
-        </div>
-        <!-- Details -->
-        <div class="flex flex-col gap-4 items-stretch sm:flex-row">
-          <div class="flex relative flex-1 items-center">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2">
-              <svg
-                width="16"
-                height="16"
-                fill="none"
-                viewBox="0 0 24 24"
-                class={newTodoPriority === 'high'
-                  ? 'text-red-500'
-                  : newTodoPriority === 'medium'
-                    ? 'text-yellow-400'
-                    : 'text-green-500'}
-                ><circle cx="12" cy="12" r="10" fill="currentColor" /></svg>
-            </span>
-            <select
-              bind:value={newTodoPriority}
-              class="py-2 pr-4 pl-8 w-full bg-white rounded-lg border text-slate-900 border-slate-300 dark:bg-slate-900/60 dark:text-white dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-all duration-200">
-              <option value="low">Low Priority</option>
-              <option value="medium">Medium Priority</option>
-              <option value="high">High Priority</option>
-            </select>
-          </div>
-          <div class="flex relative flex-1 items-center">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2">
-              <svg
-                width="16"
-                height="16"
-                fill="none"
-                viewBox="0 0 24 24"
-                class="text-blue-400"
-                ><rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor" /><rect
-                  x="11"
-                  y="4"
-                  width="2"
-                  height="16"
-                  rx="1"
-                  fill="currentColor" /></svg>
-            </span>
-            <input
-              type="text"
-              bind:value={newTodoTags}
-              placeholder="Tags (comma separated, e.g. school,math)"
-              class="py-2 pr-4 pl-8 w-full bg-white rounded-lg border text-slate-900 border-slate-300 dark:bg-slate-900/60 dark:text-white dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-all duration-200" />
-          </div>
-          <div class="flex relative flex-1 items-center">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2">
-              <svg
-                width="16"
-                height="16"
-                fill="none"
-                viewBox="0 0 24 24"
-                class="text-purple-400"
-                ><circle
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="2" /><path
-                  d="M12 6v6l4 2"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round" /></svg>
-            </span>
-            <select
-              bind:value={newTodoRecurring}
-              class="py-2 pr-4 pl-8 w-full bg-white rounded-lg border text-slate-900 border-slate-300 dark:bg-slate-900/60 dark:text-white dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-all duration-200">
-              <option value="none">No Repeat</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-          </div>
-        </div>
-        <!-- Subtasks -->
-        <div class="p-3 rounded-lg bg-slate-200/60 dark:bg-slate-900/40">
-          <div class="flex gap-2 items-center mb-2">
-            <svg
-              width="18"
-              height="18"
-              fill="none"
-              viewBox="0 0 24 24"
-              class="text-slate-600 dark:text-slate-400"
-              ><rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor" /></svg>
-            <input
-              type="text"
-              bind:value={newSubtaskText}
-              placeholder="Add subtask (e.g. Read chapter 1)"
-              class="flex-1 px-4 py-2 bg-white rounded-lg border text-slate-900 border-slate-300 dark:bg-slate-900/60 dark:text-white dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-all duration-200" />
-            <button
-              type="button"
-              onclick={addSubtask}
-              class="px-4 py-2 text-white rounded-lg shadow transition-all duration-200 transform hover:scale-105 active:scale-95 bg-accent hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-              >Add Subtask</button>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            {#each newSubtasks as st (st.id)}
-              <span
-                class="flex gap-2 items-center px-3 py-1 rounded-lg shadow-sm text-slate-800 bg-slate-300 dark:bg-slate-700 dark:text-white">
-                {st.text}
-                <button
-                  type="button"
-                  onclick={() => removeSubtask(st.id)}
-                  class="ml-2 transition-all duration-200 transform hover:scale-[1.02] accent-text hover:accent-text/80 focus:outline-none focus:ring-2 accent-ring focus:ring-offset-2"
-                  aria-label="Remove subtask">×</button>
-              </span>
-            {/each}
-          </div>
-        </div>
-        <div class="flex justify-end">
-          <button
-            type="submit"
-            class="px-8 py-2 font-semibold text-white rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105 active:scale-95 bg-accent hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2">
-            Add Task
-          </button>
-        </div>
+      class="space-y-3"
+      in:fly={{ y: 20, duration: 300, delay: 100, easing: quintOut }}>
+      <div class="flex gap-2">
+        <input
+          type="text"
+          bind:value={newTodoText}
+          placeholder="Add a quick task..."
+          class="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 accent-ring text-sm" />
+        <button
+          type="submit"
+          class="px-4 py-2 rounded-lg accent-bg text-white transition-all duration-200 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 accent-ring text-sm font-medium">
+          Add
+        </button>
       </div>
+      <div class="flex gap-2">
+        <input
+          type="date"
+          bind:value={newTodoDueDate}
+          class="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 accent-ring text-sm" />
+        <select
+          bind:value={newTodoPriority}
+          class="px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 accent-ring text-sm">
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <input
+        type="text"
+        bind:value={newTodoTags}
+        placeholder="Tags (comma separated)"
+        class="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 accent-ring text-sm" />
     </form>
 
-    <div class="space-y-4">
-      {#each todos as todo (todo.id)}
-        <div
-          class="flex flex-col gap-2 p-4 rounded-xl border backdrop-blur-sm transition-all duration-200 transform hover:scale-[1.02] border-slate-200 bg-white/80 dark:bg-slate-800/60 dark:border-slate-700 hover:shadow-lg group">
-          <div class="flex gap-3 items-center">
-            <input
-              type="checkbox"
-              checked={todo.completed}
-              onchange={() => toggleTodo(todo.id)}
-              class="w-5 h-5 rounded border-slate-300 dark:border-slate-600 text-accent focus:ring-2 focus:ring-accent focus:ring-offset-2 accent-bg transition-all duration-200" />
-            <div class="flex-1">
-              <div class="flex gap-2 items-center">
-                <p
-                  class="text-slate-900 dark:text-white {todo.completed
-                    ? 'line-through text-slate-500 dark:text-slate-400'
-                    : ''} font-semibold">
-                  {todo.text}
-                </p>
-                {#if todo.priority}
-                  <span
-                    class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold {todo.priority ===
-                    'high'
-                      ? 'bg-red-600'
-                      : todo.priority === 'medium'
-                        ? 'bg-yellow-500'
-                        : 'bg-green-600'} text-white">
-                    {todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}
-                  </span>
+    <!-- Tasks List -->
+    {#if loading}
+      <div class="flex items-center justify-center py-8">
+        <div class="w-8 h-8 rounded-full border-4 border-slate-300 dark:border-slate-700 border-t-transparent animate-spin"></div>
+      </div>
+    {:else if error}
+      <div class="text-center py-8 text-red-600 dark:text-red-400">{error}</div>
+    {:else}
+      <div class="space-y-3">
+        {#if todos.length === 0}
+          <div class="text-center py-8 text-slate-500 dark:text-slate-400">
+            No tasks yet. Add one above to get started!
+          </div>
+        {/if}
+        
+        {#each todos.filter(t => !t.completed).slice(0, 5) as todo (todo.id)}
+          <div class="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-3 enhanced-hover {completingTasks.has(todo.id) ? 'completion-animation' : ''} {deletingTasks.has(todo.id) ? 'opacity-50 scale-95' : ''}"
+               in:fly={{ y: 20, duration: 300, delay: todos.indexOf(todo) * 50, easing: quintOut }}
+               out:fly={{ y: -20, duration: 200, easing: cubicOut }}>
+            <div class="flex items-start gap-3">
+              <input 
+                type="checkbox" 
+                checked={todo.completed} 
+                onchange={() => toggleTodo(todo.id)} 
+                class="mt-0.5 w-4 h-4 rounded border-slate-300 dark:border-slate-700 focus:ring-2 accent-ring" 
+                aria-label="Toggle complete" />
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="truncate text-slate-900 dark:text-white font-medium text-sm">{todo.title || 'Untitled task'}</div>
+                  <div class="flex items-center gap-1 flex-shrink-0">
+                    <span class="text-xs px-1.5 py-0.5 rounded-full border priority-indicator {getPriorityStyles(todo.priority)}">{todo.priority ?? 'medium'}</span>
+                    <button 
+                      class="p-1 text-slate-400 hover:text-red-600 transition-colors" 
+                      onclick={() => deleteTodo(todo.id)}
+                      aria-label="Delete task">
+                      <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
+                        <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                
+                {#if todo.due_date || (todo.tags ?? []).length}
+                  <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                    {#if todo.due_date}
+                      <span class="text-slate-600 dark:text-slate-300">
+                        Due: {new Date(todo.due_date).toLocaleDateString()}
+                      </span>
+                    {/if}
+                    {#if (todo.tags ?? []).length}
+                      <span class="px-2 py-0.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200">
+                        {(todo.tags ?? []).join(', ')}
+                      </span>
+                    {/if}
+                  </div>
                 {/if}
-                {#if todo.tags && todo.tags.length}
-                  <span class="flex gap-1 ml-2">
-                    {#each todo.tags as tag}
-                      <span
-                        class="px-2 py-0.5 text-xs text-blue-100 rounded-full bg-blue-700/80"
-                        >#{tag}</span>
+                
+                {#if (todo.subtasks ?? []).length}
+                  <div class="mt-2 space-y-1">
+                    {#each todo.subtasks ?? [] as sub (sub.id)}
+                      <div class="flex items-center gap-2">
+                        <input 
+                          type="checkbox" 
+                          checked={sub.completed} 
+                          onchange={() => toggleSubtask(todo.id, sub.id)} 
+                          class="w-3 h-3 rounded border-slate-300 dark:border-slate-700 focus:ring-1 accent-ring" 
+                          aria-label="Toggle subtask" />
+                        <span class="text-xs text-slate-600 dark:text-slate-300 {sub.completed ? 'line-through' : ''}">{sub.title}</span>
+                      </div>
                     {/each}
-                  </span>
-                {/if}
-                {#if todo.recurring && todo.recurring !== 'none'}
-                  <span class="inline-block ml-2 text-xs text-purple-300">
-                    {todo.recurring.charAt(0).toUpperCase() + todo.recurring.slice(1)}
-                  </span>
+                  </div>
                 {/if}
               </div>
-              {#if todo.dueDate}
-                <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                  Due: {new Date(todo.dueDate).toLocaleDateString()}
-                </p>
-              {/if}
             </div>
-            <button
-              onclick={() => deleteTodo(todo.id)}
-              class="p-2 transition-all duration-200 transform hover:scale-[1.02] accent-text hover:accent-text/80 focus:outline-none focus:ring-2 accent-ring focus:ring-offset-2"
-              title="Delete task"
-              aria-label="Delete task">
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"
-                ><path
-                  d="M6 6l12 12M6 18L18 6"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round" /></svg>
-            </button>
           </div>
-          {#if todo.subtasks && todo.subtasks.length}
-            <div
-              class="flex flex-col gap-1 p-2 mt-2 ml-8 rounded-lg bg-slate-200/60 dark:bg-slate-900/40">
-              {#each todo.subtasks as st (st.id)}
-                <div class="flex gap-2 items-center">
-                  <input
-                    type="checkbox"
-                    checked={st.completed}
-                    onchange={() => toggleSubtask(todo.id, st.id)}
-                    class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-accent focus:ring-2 focus:ring-accent focus:ring-offset-2 accent-bg transition-all duration-200" />
-                  <span
-                    class="text-sm text-slate-900 dark:text-white {st.completed
-                      ? 'line-through text-slate-500 dark:text-slate-400'
-                      : ''}">{st.text}</span>
-                </div>
-              {/each}
-            </div>
-          {/if}
-        </div>
-      {/each}
-    </div>
+        {/each}
+        
+        {#if todos.filter(t => !t.completed).length > 5}
+          <div class="text-center py-2">
+            <span class="text-sm text-slate-500 dark:text-slate-400">
+              Showing 5 of {todos.filter(t => !t.completed).length} active tasks
+            </span>
+          </div>
+        {/if}
+      </div>
+    {/if}
   </div>
 </div> 

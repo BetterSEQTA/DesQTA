@@ -1,0 +1,72 @@
+/* Pink Girly Pop Theme - Light Mode Styles */
+
+.light {
+  --background-color: linear-gradient(135deg, #ffeef8 0%, #ffd1dc 50%, #ffb6c1 100%);
+  --surface-color: rgba(255, 182, 193, 0.3);
+  --text-color: #8b4874;
+  --border-color: #ff69b4;
+}
+
+.light body {
+  background: var(--background-color) !important;
+  color: var(--text-color) !important;
+}
+
+.light .girly-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 182, 193, 0.4) 100%);
+  border-color: rgba(255, 105, 180, 0.3);
+  color: #8b4874;
+}
+
+.light .girly-header {
+  background: linear-gradient(135deg, rgba(255, 182, 193, 0.9) 0%, rgba(255, 105, 180, 0.7) 100%);
+  border-bottom-color: rgba(255, 105, 180, 0.3);
+}
+
+.light .girly-sidebar {
+  background: linear-gradient(180deg, rgba(255, 240, 248, 0.8) 0%, rgba(255, 182, 193, 0.4) 100%);
+  border-right-color: rgba(255, 105, 180, 0.3);
+}
+
+.light .girly-nav-item {
+  color: #8b4874;
+}
+
+.light .girly-nav-item:hover {
+  background: linear-gradient(135deg, rgba(255, 105, 180, 0.15) 0%, rgba(255, 182, 193, 0.2) 100%);
+}
+
+.light .girly-input {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 105, 180, 0.3);
+  color: #8b4874;
+}
+
+.light .girly-input::placeholder {
+  color: rgba(139, 72, 116, 0.6);
+}
+
+.light .girly-modal {
+  background: linear-gradient(135deg, rgba(255, 240, 248, 0.95) 0%, rgba(255, 182, 193, 0.8) 100%);
+  border-color: rgba(255, 105, 180, 0.3);
+  color: #8b4874;
+}
+
+/* Light mode scrollbar */
+.light ::-webkit-scrollbar {
+  background: rgba(255, 182, 193, 0.2);
+}
+
+.light ::-webkit-scrollbar-track {
+  background: rgba(255, 240, 248, 0.5);
+}
+
+/* Enhanced light mode text contrast */
+.light .girly-title {
+  text-shadow: 0 2px 4px rgba(255, 105, 180, 0.3);
+}
+
+.light .girly-subtitle {
+  color: #8b4874 !important;
+  text-shadow: 0 1px 2px rgba(255, 105, 180, 0.2);
+}

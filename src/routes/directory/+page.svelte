@@ -4,6 +4,9 @@
   import { Icon } from 'svelte-hero-icons';
   import { MagnifyingGlass, Funnel, User, AcademicCap, MapPin } from 'svelte-hero-icons';
   import { invoke } from '@tauri-apps/api/core';
+  import { cache } from '../../utils/cache';
+  import { getWithIdbFallback, setIdb } from '$lib/services/idbCache';
+  import { AsyncWrapper, SearchInput, Badge } from '$lib/components/ui';
 
   interface Student {
     id: number;
@@ -47,8 +50,8 @@
 
   async function checkSensitiveInfoHider() {
     try {
-      const settings = await invoke<{ dev_sensitive_info_hider?: boolean }>('get_settings');
-      devSensitiveInfoHider = settings.dev_sensitive_info_hider ?? false;
+      const subset = await invoke<any>('get_settings_subset', { keys: ['dev_sensitive_info_hider'] });
+      devSensitiveInfoHider = subset?.dev_sensitive_info_hider ?? false;
     } catch (e) {
       devSensitiveInfoHider = false;
     }
@@ -58,6 +61,20 @@
     loading = true;
     error = null;
     try {
+      const cacheKey = 'directory_students_all';
+      const cached = cache.get<Student[]>(cacheKey) || await getWithIdbFallback<Student[]>(cacheKey, cacheKey, () => cache.get<Student[]>(cacheKey));
+      if (cached) {
+        students = cached;
+        // hydrate filters from cached too
+        const uniqueYears = [...new Set(students.map(s => s.year))].sort();
+        const uniqueSubSchools = [...new Set(students.map(s => s.sub_school))].sort();
+        const uniqueHouses = [...new Set(students.map(s => s.house))].sort();
+        const uniqueCampuses = [...new Set(students.map(s => s.campus))].sort();
+        years = uniqueYears; subSchools = uniqueSubSchools; houses = uniqueHouses; campuses = uniqueCampuses;
+        loading = false;
+        return;
+      }
+
       const res = await seqtaFetch('/seqta/student/load/message/people', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
@@ -102,6 +119,11 @@
       subSchools = uniqueSubSchools;
       houses = uniqueHouses;
       campuses = uniqueCampuses;
+
+      // Cache mem + IDB
+      cache.set(cacheKey, students, 60);
+      console.info('[IDB] directory cached (mem+idb)', { count: students.length });
+      await setIdb(cacheKey, students);
       
       console.log('Loaded students:', students.length, 'students');
       console.log('Sample student:', students[0]);
@@ -315,38 +337,18 @@
       </p>
     </div>
 
-    <!-- Loading State -->
-    {#if loading}
-      <div class="flex items-center justify-center py-12">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 accent-border"></div>
-        <span class="ml-3 text-gray-600 dark:text-gray-400">Loading students...</span>
-      </div>
-    {:else if error}
-      <!-- Error State -->
-      <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-        <div class="flex">
-          <div class="flex-shrink-0">
-            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div class="ml-3">
-            <h3 class="text-sm font-medium text-red-800 dark:text-red-200">Error loading students</h3>
-            <div class="mt-2 text-sm text-red-700 dark:text-red-300">{error}</div>
-          </div>
-        </div>
-      </div>
-    {:else if getFilteredStudents().length === 0}
-      <!-- Empty State -->
-      <div class="text-center py-12">
-        <Icon src={User} class="mx-auto h-12 w-12 text-gray-400" />
-        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No students found</h3>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Try adjusting your search or filters to find what you're looking for.
-        </p>
-      </div>
-    {:else}
-      <!-- Students Grid -->
+    <AsyncWrapper
+      loading={loading}
+      error={error}
+      data={getFilteredStudents()}
+      empty={getFilteredStudents().length === 0}
+      emptyTitle="No students found"
+      emptyMessage="Try adjusting your search or filters to find what you're looking for."
+      emptyIcon="👥"
+      componentName="Directory"
+    >
+      {#snippet children(students)}
+        <!-- Students Grid -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {#each getPaginatedStudents() as student (student.id)}
           <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 transition-all duration-200 transform hover:scale-[1.02]">
@@ -444,6 +446,7 @@
           </button>
         </div>
       {/if}
-    {/if}
+      {/snippet}
+    </AsyncWrapper>
   </div>
 </div> 

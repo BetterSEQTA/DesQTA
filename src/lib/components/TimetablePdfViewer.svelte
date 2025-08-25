@@ -40,7 +40,7 @@
   <div class="absolute top-6 right-6 z-10 flex gap-2 pointer-events-none">
     <button
       class="flex justify-center items-center w-10 h-10 rounded-xl transition-all duration-200 pointer-events-auto bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 shadow-md hover:shadow-lg"
-      on:click={() => {
+      onclick={() => {
         if (pdfUrl) {
           saveAs(pdfUrl, 'timetable.pdf');
         }
@@ -50,7 +50,7 @@
     </button>
     <button
       class="flex justify-center items-center w-10 h-10 rounded-xl transition-all duration-200 pointer-events-auto bg-red-100 hover:bg-red-200 dark:bg-red-900/40 dark:hover:bg-red-900/60 shadow-md hover:shadow-lg"
-      on:click={onClose}
+      onclick={onClose}
       aria-label="Close PDF viewer">
       <Icon src={XMark} class="w-5 h-5 text-red-600 dark:text-red-300" />
     </button>

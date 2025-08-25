@@ -1,0 +1,570 @@
+/* Neon Cyber Theme - Global Styles */
+
+/* Import futuristic fonts */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Orbitron:wght@400;500;600;700;800;900&family=Exo+2:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --accent-color-value: #00ff41;
+  --accent-color-hover: #00cc33;
+  --primary-neon: #00ff41;
+  --secondary-neon: #ff0080;
+  --tertiary-neon: #00ffff;
+  --warning-neon: #ffaa00;
+  --error-neon: #ff0040;
+  --background-color: #0a0a0f;
+  --surface-color: #1a1a2e;
+  --card-color: #16213e;
+  --text-color: #00ff41;
+  --text-secondary: #9ca3af;
+  --border-color: #00ff41;
+  --shadow-neon: rgba(0, 255, 65, 0.5);
+  --shadow-pink: rgba(255, 0, 128, 0.3);
+  --shadow-cyan: rgba(0, 255, 255, 0.3);
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  --font-family-display: 'Orbitron', 'Exo 2', futuristic, sans-serif;
+  --glitch-width: 2px;
+  --scan-line-speed: 3s;
+}
+
+html, body {
+  background: var(--background-color) !important;
+  color: var(--text-color) !important;
+  font-family: var(--font-family-mono);
+  font-weight: 400;
+  overflow-x: hidden;
+}
+
+/* Cyberpunk animations */
+@keyframes neon-glow {
+  0%, 100% { 
+    text-shadow: 
+      0 0 5px var(--primary-neon),
+      0 0 10px var(--primary-neon),
+      0 0 15px var(--primary-neon),
+      0 0 20px var(--primary-neon);
+  }
+  50% { 
+    text-shadow: 
+      0 0 2px var(--primary-neon),
+      0 0 5px var(--primary-neon),
+      0 0 8px var(--primary-neon),
+      0 0 12px var(--primary-neon);
+  }
+}
+
+@keyframes glitch {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-2px); }
+  40% { transform: translateX(2px); }
+  60% { transform: translateX(-1px); }
+  80% { transform: translateX(1px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes scan-lines {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes terminal-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+@keyframes matrix-rain {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+@keyframes neon-border {
+  0% { border-color: var(--primary-neon); box-shadow: 0 0 5px var(--shadow-neon); }
+  33% { border-color: var(--secondary-neon); box-shadow: 0 0 5px var(--shadow-pink); }
+  66% { border-color: var(--tertiary-neon); box-shadow: 0 0 5px var(--shadow-cyan); }
+  100% { border-color: var(--primary-neon); box-shadow: 0 0 5px var(--shadow-neon); }
+}
+
+/* Global scan line effect */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--primary-neon), transparent);
+  animation: scan-lines var(--scan-line-speed) linear infinite;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+/* Cyber components */
+.cyber-card {
+  background: linear-gradient(135deg, var(--surface-color) 0%, var(--card-color) 100%);
+  border: 1px solid var(--primary-neon);
+  border-radius: 0;
+  box-shadow: 
+    0 0 10px var(--shadow-neon),
+    inset 0 1px 0 rgba(0, 255, 65, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.1), transparent);
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.cyber-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border: 1px solid var(--primary-neon);
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 255, 65, 0.1);
+  pointer-events: none;
+}
+
+.cyber-button {
+  background: linear-gradient(135deg, transparent 0%, var(--primary-neon)10 30%, transparent 100%);
+  border: 1px solid var(--primary-neon);
+  color: var(--primary-neon);
+  font-family: var(--font-family-mono);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 12px 24px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.cyber-button:hover {
+  background: var(--primary-neon);
+  color: var(--background-color);
+  box-shadow: 
+    0 0 20px var(--shadow-neon),
+    inset 0 0 20px rgba(0, 0, 0, 0.2);
+  animation: glitch 0.3s ease-in-out;
+}
+
+.cyber-button:active {
+  transform: scale(0.98);
+  animation: flicker 0.1s ease-in-out;
+}
+
+.cyber-button::before {
+  content: '> ';
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.cyber-button:hover::before {
+  opacity: 1;
+}
+
+.cyber-button::after {
+  content: ' <';
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.cyber-button:hover::after {
+  opacity: 1;
+}
+
+/* Terminal-style input */
+.cyber-input {
+  background: var(--background-color);
+  border: 1px solid var(--primary-neon);
+  color: var(--primary-neon);
+  font-family: var(--font-family-mono);
+  padding: 12px 16px;
+  outline: none;
+  transition: all 0.3s ease;
+  box-shadow: 
+    inset 0 0 5px rgba(0, 255, 65, 0.1),
+    0 0 5px var(--shadow-neon);
+}
+
+.cyber-input:focus {
+  box-shadow: 
+    inset 0 0 10px rgba(0, 255, 65, 0.2),
+    0 0 15px var(--shadow-neon);
+  animation: neon-glow 2s ease-in-out infinite;
+}
+
+.cyber-input::placeholder {
+  color: rgba(0, 255, 65, 0.5);
+  font-style: italic;
+}
+
+/* Header styling */
+.cyber-header {
+  background: linear-gradient(135deg, var(--background-color) 0%, var(--surface-color) 100%);
+  border-bottom: 1px solid var(--primary-neon);
+  box-shadow: 0 2px 10px var(--shadow-neon);
+  position: relative;
+}
+
+.cyber-header::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--primary-neon), var(--secondary-neon), var(--tertiary-neon), transparent);
+  animation: neon-border 4s ease-in-out infinite;
+}
+
+.cyber-header h1 {
+  font-family: var(--font-family-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  background: linear-gradient(135deg, var(--primary-neon), var(--secondary-neon), var(--tertiary-neon));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: neon-glow 3s ease-in-out infinite;
+  position: relative;
+}
+
+.cyber-header h1::after {
+  content: '_';
+  animation: terminal-blink 1s infinite;
+}
+
+/* Sidebar styling */
+.cyber-sidebar {
+  background: linear-gradient(180deg, var(--background-color) 0%, var(--surface-color) 100%);
+  border-right: 1px solid var(--primary-neon);
+  box-shadow: 2px 0 10px var(--shadow-neon);
+  position: relative;
+}
+
+.cyber-sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--primary-neon), var(--secondary-neon), var(--tertiary-neon));
+  animation: neon-glow 2s ease-in-out infinite;
+}
+
+.cyber-nav-item {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-family-mono);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 4px 8px;
+  padding: 12px 16px;
+  transition: all 0.3s ease;
+  position: relative;
+  cursor: pointer;
+}
+
+.cyber-nav-item:hover {
+  background: rgba(0, 255, 65, 0.1);
+  border-color: var(--primary-neon);
+  color: var(--primary-neon);
+  transform: translateX(4px);
+  box-shadow: 0 0 10px var(--shadow-neon);
+}
+
+.cyber-nav-item.active {
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.2), transparent);
+  border-color: var(--primary-neon);
+  color: var(--primary-neon);
+  box-shadow: 
+    0 0 15px var(--shadow-neon),
+    inset 0 0 10px rgba(0, 255, 65, 0.1);
+  animation: neon-glow 2s ease-in-out infinite;
+}
+
+.cyber-nav-item.active::before {
+  content: '> ';
+  position: absolute;
+  left: 8px;
+  color: var(--primary-neon);
+  animation: terminal-blink 1s infinite;
+}
+
+/* Cyber scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  background: var(--background-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--primary-neon), var(--secondary-neon));
+  border-radius: 0;
+  box-shadow: 0 0 5px var(--shadow-neon);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--secondary-neon), var(--primary-neon));
+  box-shadow: 0 0 10px var(--shadow-pink);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-color);
+  border: 1px solid rgba(0, 255, 65, 0.1);
+}
+
+/* Accent classes */
+.accent-bg {
+  background: linear-gradient(135deg, var(--primary-neon) 0%, var(--secondary-neon) 100%) !important;
+  color: var(--background-color) !important;
+  box-shadow: 0 0 15px var(--shadow-neon) !important;
+}
+
+.accent-bg-hover:hover {
+  background: linear-gradient(135deg, var(--secondary-neon) 0%, var(--primary-neon) 100%) !important;
+  transform: scale(1.02);
+  animation: glitch 0.3s ease-in-out;
+}
+
+.accent-text {
+  color: var(--primary-neon) !important;
+  text-shadow: 0 0 5px var(--shadow-neon);
+}
+
+.accent-border {
+  border-color: var(--primary-neon) !important;
+  box-shadow: 0 0 5px var(--shadow-neon);
+}
+
+.accent-ring {
+  --tw-ring-color: var(--primary-neon) !important;
+  box-shadow: 0 0 0 3px var(--shadow-neon);
+}
+
+.accent-shadow {
+  box-shadow: 0 0 15px var(--shadow-neon) !important;
+}
+
+.hover\:accent-shadow:hover {
+  box-shadow: 0 0 25px var(--shadow-neon) !important;
+  animation: neon-glow 1s ease-in-out infinite;
+}
+
+/* Terminal text effects */
+.cyber-terminal {
+  font-family: var(--font-family-mono);
+  background: var(--background-color);
+  color: var(--primary-neon);
+  border: 1px solid var(--primary-neon);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-terminal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 255, 65, 0.03) 2px,
+      rgba(0, 255, 65, 0.03) 4px
+    );
+  pointer-events: none;
+}
+
+.cyber-glitch {
+  position: relative;
+  animation: glitch 2s ease-in-out infinite;
+}
+
+.cyber-glitch::before,
+.cyber-glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.cyber-glitch::before {
+  color: var(--secondary-neon);
+  animation: glitch 0.3s, glitch 0.3s 0.5s;
+  clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+}
+
+.cyber-glitch::after {
+  color: var(--tertiary-neon);
+  animation: glitch 0.3s 0.25s, glitch 0.3s 0.75s;
+  clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+}
+
+/* Loading and status indicators */
+.cyber-loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--primary-neon);
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  box-shadow: 0 0 10px var(--shadow-neon);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.cyber-status-online {
+  color: var(--primary-neon);
+  text-shadow: 0 0 5px var(--shadow-neon);
+}
+
+.cyber-status-online::before {
+  content: '● ';
+  color: var(--primary-neon);
+  animation: terminal-blink 1s infinite;
+}
+
+.cyber-status-error {
+  color: var(--error-neon);
+  text-shadow: 0 0 5px rgba(255, 0, 64, 0.5);
+}
+
+.cyber-status-error::before {
+  content: '✕ ';
+  color: var(--error-neon);
+}
+
+.cyber-status-warning {
+  color: var(--warning-neon);
+  text-shadow: 0 0 5px rgba(255, 170, 0, 0.5);
+}
+
+.cyber-status-warning::before {
+  content: '⚠ ';
+  color: var(--warning-neon);
+}
+
+/* Modal styling */
+.cyber-modal {
+  background: linear-gradient(135deg, var(--background-color) 0%, var(--surface-color) 100%);
+  border: 2px solid var(--primary-neon);
+  box-shadow: 
+    0 0 30px var(--shadow-neon),
+    inset 0 0 30px rgba(0, 255, 65, 0.1);
+  position: relative;
+}
+
+.cyber-modal::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, var(--primary-neon), var(--secondary-neon), var(--tertiary-neon), var(--primary-neon));
+  z-index: -1;
+  animation: neon-border 3s linear infinite;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-display) !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 2px !important;
+  color: var(--primary-neon) !important;
+}
+
+.cyber-title {
+  font-family: var(--font-family-display);
+  background: linear-gradient(135deg, var(--primary-neon), var(--secondary-neon), var(--tertiary-neon));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: neon-glow 3s ease-in-out infinite;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  position: relative;
+}
+
+.cyber-subtitle {
+  font-family: var(--font-family-mono);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 500;
+}
+
+/* Ensure proper dark mode */
+body, input, button, select, textarea {
+  font-family: var(--font-family-mono) !important;
+  background-color: transparent !important;
+}
+
+/* Matrix rain effect (optional, can be enabled) */
+.matrix-rain {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.matrix-rain::before {
+  content: '01010101010101010101010101010101010101010101';
+  position: absolute;
+  top: -100%;
+  left: 10%;
+  color: var(--primary-neon);
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  opacity: 0.1;
+  animation: matrix-rain 10s linear infinite;
+}
+
+.matrix-rain::after {
+  content: '11001100110011001100110011001100110011001100';
+  position: absolute;
+  top: -100%;
+  right: 20%;
+  color: var(--secondary-neon);
+  font-family: var(--font-family-mono);
+  font-size: 8px;
+  opacity: 0.1;
+  animation: matrix-rain 15s linear infinite 2s;
+}

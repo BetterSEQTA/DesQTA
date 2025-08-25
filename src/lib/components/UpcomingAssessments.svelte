@@ -3,6 +3,7 @@
   import { seqtaFetch } from '../../utils/netUtil';
   import { cache } from '../../utils/cache';
   import { Icon, DocumentText } from 'svelte-hero-icons';
+  import { Badge } from '$lib/components/ui';
 
   const studentId = 69; //! literally changes nothing but was used in the original seqta code.
 
@@ -101,13 +102,13 @@
     const now = new Date();
 
     if (status === 'MARKS_RELEASED') {
-      return { text: 'Marked', color: 'bg-green-500' };
+      return { text: 'Marked', variant: 'success' as const };
     } else if (dueDate < now) {
-      return { text: 'Overdue', color: 'bg-red-500' };
+      return { text: 'Overdue', variant: 'danger' as const };
     } else if (dueDate.getTime() - now.getTime() < 7 * 24 * 60 * 60 * 1000) {
-      return { text: 'Due Soon', color: 'bg-yellow-500' };
+      return { text: 'Due Soon', variant: 'warning' as const };
     } else {
-      return { text: 'Upcoming', color: 'bg-blue-500' };
+      return { text: 'Upcoming', variant: 'info' as const };
     }
   }
 
@@ -185,13 +186,12 @@
                     day: 'numeric',
                   })}
                 </div>
-                <span
-                  class="px-2 py-0.5 rounded-lg text-xs font-medium text-white shadow-sm transition-all duration-200 {getStatusBadge(
-                    a.status,
-                    a.due,
-                  ).color}">
+                <Badge
+                  variant={getStatusBadge(a.status, a.due).variant}
+                  size="xs"
+                >
                   {getStatusBadge(a.status, a.due).text}
-                </span>
+                </Badge>
               </div>
               <div class="mt-1">
                 <span

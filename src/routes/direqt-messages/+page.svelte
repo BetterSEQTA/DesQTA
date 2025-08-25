@@ -3,6 +3,7 @@
   import { seqtaFetch, getRSS } from '../../utils/netUtil';
   import { type Message } from './types';
   import { cache } from '../../utils/cache';
+  import { invoke } from '@tauri-apps/api/core';
 
   // Components
   import Sidebar from './components/Sidebar.svelte';
@@ -10,6 +11,7 @@
   import MessageDetail from './components/Message.svelte';
   import ComposeModal from './components/ComposeModal.svelte';
   import Modal from '$lib/components/Modal.svelte';
+  import BetterSeqtaChat from './components/BetterSeqtaChat.svelte';
 
   // External Libraries
   import dayjs from 'dayjs';
@@ -34,10 +36,19 @@
 
   // Derived state for mobile modal
   let showMobileModal = $derived(!!selectedMessage);
+  let selectedTab = $state('SEQTA'); // 'SEQTA' or 'BetterSEQTA'
+  let seqtaLoadFailed = $state(false);
+  let seqtaMessagesEnabled = $state<boolean | null>(null);
+
+  onMount(async () => {
+    // Always enable both tabs regardless of SEQTA config
+    seqtaMessagesEnabled = true;
+  });
 
   async function fetchMessages(folderLabel: string = 'inbox', rssname: string = '') {
     loading = true;
     error = null;
+    seqtaLoadFailed = false;
     console.log(folderLabel);
     try {
       if (folderLabel === 'sent') {
@@ -165,14 +176,16 @@
     } catch (e) {
       error = 'Failed to load messages.';
       messages = [];
+      seqtaLoadFailed = true;
     } finally {
       loading = false;
     }
   }
 
   $effect(() => {
-    // This effect will replace onMount
+    if (selectedTab === 'SEQTA') {
     fetchMessages('inbox');
+    }
   });
 
   async function openMessage(msg: Message) {
@@ -330,66 +343,44 @@
       restoring = false;
     }
   }
+
+  function openTab(tab: string) {
+    selectedTab = tab;
+    selectedMessage = null;
+  }
 </script>
+
+<!-- Tab Switcher -->
+<div class="flex gap-2 p-4 border-b border-slate-300/50 dark:border-slate-800/50 bg-white dark:bg-slate-900">
+  <button
+    class="px-4 py-2 rounded-lg font-semibold transition-all duration-200 focus:outline-none focus:ring-2 accent-ring text-base
+      {selectedTab === 'SEQTA' ? 'accent-bg text-white' : 'text-slate-700 dark:text-white hover:bg-accent-100 dark:hover:bg-accent-700'}"
+    onclick={() => openTab('SEQTA')}
+    disabled={selectedTab === 'SEQTA'}>
+    SEQTA Messages
+  </button>
+  <button
+    class="px-4 py-2 rounded-lg font-semibold transition-all duration-200 focus:outline-none focus:ring-2 accent-ring text-base
+      {selectedTab === 'BetterSEQTA' ? 'accent-bg text-white' : 'text-slate-700 dark:text-white hover:bg-accent-100 dark:hover:bg-accent-700'}"
+    onclick={() => openTab('BetterSEQTA')}
+    disabled={selectedTab === 'BetterSEQTA'}>
+    Cloud Messaging
+  </button>
+</div>
 
 <div class="flex h-full">
   <div class="flex w-full h-full max-xl:flex-col">
-    <Sidebar {selectedFolder} {openFolder} {openCompose} />
-
-    <MessageList {selectedFolder} {messages} {loading} {error} {selectedMessage} {openMessage} />
-
-    <!-- Message detail view - full screen on mobile -->
-    <div class="hidden flex-1 xl:block">
-      <MessageDetail
-        {selectedMessage}
-        {selectedFolder}
-        {detailLoading}
-        {detailError}
-        {openCompose}
-        {starMessage}
-        {deleteMessage}
-        {restoreMessage}
-        {starring}
-        {deleting}
-        {restoring} />
-    </div>
-  </div>
-
-  <!-- Mobile message detail modal -->
-  <div class="xl:hidden">
-    <Modal
-      open={showMobileModal}
-      onclose={() => (selectedMessage = null)}
-      maxWidth="w-full"
-      maxHeight="h-full"
-      customClasses="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm rounded-none"
-      showCloseButton={false}
-      closeOnBackdrop={false}
-      ariaLabel="Message Detail">
-      <div class="flex flex-col h-full">
-        <div
-          class="flex justify-between items-center p-4 border-b border-slate-300/50 dark:border-slate-800/50">
-          <button
-            class="flex gap-2 items-center transition-colors text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
-            onclick={() => (selectedMessage = null)}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-5 h-5"
-              viewBox="0 0 20 20"
-              fill="currentColor">
-              <path
-                fill-rule="evenodd"
-                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                clip-rule="evenodd" />
-            </svg>
-            <span class="text-sm font-medium">Back</span>
-          </button>
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Message</span>
-          <div class="w-8"></div>
-          <!-- Spacer for alignment -->
+    {#if selectedTab === 'SEQTA'}
+      {#if seqtaLoadFailed}
+        <div class="flex flex-col items-center justify-center w-full h-full p-8 text-center">
+          <div class="text-red-500 dark:text-red-400 text-lg font-semibold mb-4">SEQTA messaging failed to load.</div>
+          <div class="text-slate-500 dark:text-slate-300 mb-4">You can still use Cloud Messaging by switching tabs above.</div>
         </div>
-
-        <div class="overflow-y-auto flex-1">
+      {:else}
+        <Sidebar {selectedFolder} {openFolder} {openCompose} />
+        <MessageList {selectedFolder} {messages} {loading} {error} {selectedMessage} {openMessage} />
+        <!-- Message detail view - full screen on mobile -->
+        <div class="hidden flex-1 xl:block">
           <MessageDetail
             {selectedMessage}
             {selectedFolder}
@@ -403,9 +394,65 @@
             {deleting}
             {restoring} />
         </div>
-      </div>
-    </Modal>
+      {/if}
+    {:else if selectedTab === 'BetterSEQTA'}
+      <BetterSeqtaChat />
+    {/if}
   </div>
+
+  <!-- Mobile message detail modal -->
+  {#if selectedTab === 'SEQTA' && !seqtaLoadFailed}
+    <div class="xl:hidden">
+      <Modal
+        open={showMobileModal}
+        onclose={() => (selectedMessage = null)}
+        maxWidth="w-full"
+        maxHeight="h-full"
+        customClasses="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm rounded-none"
+        showCloseButton={false}
+        closeOnBackdrop={false}
+        ariaLabel="Message Detail">
+        <div class="flex flex-col h-full">
+          <div
+            class="flex justify-between items-center p-4 border-b border-slate-300/50 dark:border-slate-800/50">
+            <button
+              class="flex gap-2 items-center transition-colors text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+              onclick={() => (selectedMessage = null)}>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5"
+                viewBox="0 0 20 20"
+                fill="currentColor">
+                <path
+                  fill-rule="evenodd"
+                  d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                  clip-rule="evenodd" />
+              </svg>
+              <span class="text-sm font-medium">Back</span>
+            </button>
+            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Message</span>
+            <div class="w-8"></div>
+            <!-- Spacer for alignment -->
+          </div>
+
+          <div class="overflow-y-auto flex-1">
+            <MessageDetail
+              {selectedMessage}
+              {selectedFolder}
+              {detailLoading}
+              {detailError}
+              {openCompose}
+              {starMessage}
+              {deleteMessage}
+              {restoreMessage}
+              {starring}
+              {deleting}
+              {restoring} />
+          </div>
+        </div>
+      </Modal>
+    </div>
+  {/if}
 </div>
 
 <ComposeModal {showComposeModal} {composeSubject} {composeBody} {closeModal} />

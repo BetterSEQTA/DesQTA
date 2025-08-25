@@ -1,5 +1,6 @@
 import { writable, derived } from 'svelte/store';
 import { invoke } from '@tauri-apps/api/core';
+import { logger } from '../../utils/logger';
 import { themeService, type ThemeManifest } from '../services/themeService';
 
 // Create a writable store with the default accent color
@@ -50,8 +51,8 @@ function applyTheme(themeValue: 'light' | 'dark' | 'system') {
 // Function to load the accent color from settings
 export async function loadAccentColor() {
   try {
-    const settings = await invoke<{ accent_color: string }>('get_settings');
-    accentColor.set(settings.accent_color || '#3b82f6');
+    const subset = await invoke<any>('get_settings_subset', { keys: ['accent_color'] });
+    accentColor.set(subset?.accent_color || '#3b82f6');
   } catch (e) {
     console.error('Failed to load accent color:', e);
   }
@@ -60,8 +61,8 @@ export async function loadAccentColor() {
 // Function to load the theme from settings
 export async function loadTheme() {
   try {
-    const settings = await invoke<{ theme: 'light' | 'dark' | 'system' }>('get_settings');
-    const loadedTheme = settings.theme || 'system';
+    const subset = await invoke<any>('get_settings_subset', { keys: ['theme'] });
+    const loadedTheme = subset?.theme || 'system';
     theme.set(loadedTheme);
     applyTheme(loadedTheme);
 
@@ -92,29 +93,18 @@ export async function loadTheme() {
 // Function to update the accent color
 export async function updateAccentColor(color: string) {
   try {
-    const settings = await invoke<any>('get_settings');
-    await invoke('save_settings', {
-      newSettings: {
-        ...settings,
-        accent_color: color,
-      },
-    });
+    await invoke('save_settings_merge', { patch: { accent_color: color } });
     accentColor.set(color);
+    logger.debug('themeStore', 'updateAccentColor', 'Accent color updated successfully', { color });
   } catch (e) {
-    console.error('Failed to update accent color:', e);
+    logger.error('themeStore', 'updateAccentColor', `Failed to update accent color: ${e}`, { error: e, color });
   }
 }
 
 // Function to update the theme
 export async function updateTheme(newTheme: 'light' | 'dark' | 'system') {
   try {
-    const settings = await invoke<any>('get_settings');
-    await invoke('save_settings', {
-      newSettings: {
-        ...settings,
-        theme: newTheme,
-      },
-    });
+    await invoke('save_settings_merge', { patch: { theme: newTheme } });
     theme.set(newTheme);
     applyTheme(newTheme);
 
@@ -150,50 +140,33 @@ export async function loadAndApplyTheme(themeName: string) {
     const manifest = await themeService.getThemeManifest(themeName);
     themeManifest.set(manifest);
 
+    // Only fetch what we need
+    let subset = await invoke<any>('get_settings_subset', { keys: ['current_theme','accent_color','theme'] });
+
     if (themeName === 'default') {
-      // Reset accent color to default and save
-      accentColor.set('#3b82f6');
-      let settings = await invoke<any>('get_settings');
-      await invoke('save_settings', {
-        newSettings: {
-          ...settings,
-          current_theme: 'default',
-          accent_color: '#3b82f6',
-          theme: 'dark', // or 'system' if you want system default
-        },
-      });
-      theme.set('dark'); // or 'system'
-      applyTheme('dark'); // or 'system'
+      // Reset accent color and theme to defaults, then save once
+      const defaultAccent = '#3b82f6';
+      const defaultTheme: 'light' | 'dark' | 'system' = 'dark';
+      accentColor.set(defaultAccent);
+      theme.set(defaultTheme);
+      await invoke('save_settings_merge', { patch: { current_theme: 'default', accent_color: defaultAccent, theme: defaultTheme } });
+      applyTheme(defaultTheme);
       return;
     }
 
     if (manifest) {
-      // 1. Set and save accent color first
-      accentColor.set(manifest.settings.defaultAccentColor);
-      let settings = await invoke<any>('get_settings');
-      await invoke('save_settings', {
-        newSettings: {
-          ...settings,
-          accent_color: manifest.settings.defaultAccentColor,
-        },
-      });
+      // Use manifest values, save once
+      const nextAccent = manifest.settings.defaultAccentColor;
+      const nextTheme = manifest.settings.defaultTheme;
+      accentColor.set(nextAccent);
+      theme.set(nextTheme);
+      await invoke('save_settings_merge', { patch: { current_theme: themeName, accent_color: nextAccent, theme: nextTheme } });
 
-      // 2. Set and save theme
-      theme.set(manifest.settings.defaultTheme);
-      settings = await invoke<any>('get_settings');
-      await invoke('save_settings', {
-        newSettings: {
-          ...settings,
-          current_theme: themeName,
-          theme: manifest.settings.defaultTheme,
-        },
-      });
-
-      // 3. Apply theme visually
-      applyTheme(manifest.settings.defaultTheme);
+      // Apply theme visually after stores updated and settings persisted
+      applyTheme(nextTheme);
     }
   } catch (error) {
-    console.error('Failed to load and apply theme:', error);
+    logger.error('themeStore', 'loadAndApplyTheme', 'Failed to load and apply theme', { error, themeName });
   }
 }
 
@@ -209,20 +182,39 @@ export function applyCustomCSS(css: string) {
 // Load current theme from settings
 export async function loadCurrentTheme() {
   try {
-    const settings = await invoke<any>('get_settings');
-    const savedTheme = settings.current_theme || settings.theme || 'default';
-    currentTheme.set(savedTheme);
+    const subset = await invoke<any>('get_settings_subset', { keys: ['current_theme','theme'] });
+    const savedThemeName: string = subset?.current_theme || subset?.theme || 'default';
+    currentTheme.set(savedThemeName);
 
-    // Actually apply the theme on startup!
-    await themeService.loadTheme(savedTheme);
+    // Load the theme pack
+    await themeService.loadTheme(savedThemeName);
 
-    if (savedTheme !== 'default') {
-      const manifest = await themeService.getThemeManifest(savedTheme);
+    if (savedThemeName !== 'default') {
+      const manifest = await themeService.getThemeManifest(savedThemeName);
       themeManifest.set(manifest);
+      if (manifest) {
+        // Ensure accent and theme stores reflect manifest on startup
+        accentColor.set(manifest.settings.defaultAccentColor);
+        theme.set(manifest.settings.defaultTheme);
+        applyTheme(manifest.settings.defaultTheme);
+      }
+    } else {
+      // Default theme fallback
+      const defaultAccent = '#3b82f6';
+      const defaultTheme: 'light' | 'dark' | 'system' = 'dark';
+      accentColor.set(defaultAccent);
+      theme.set(defaultTheme);
+      applyTheme(defaultTheme);
     }
   } catch (error) {
-    console.error('Failed to load current theme:', error);
+    logger.error('themeStore', 'loadCurrentTheme', 'Failed to load current theme', { error });
     currentTheme.set('default');
+    // Apply safe defaults
+    const defaultAccent = '#3b82f6';
+    const defaultTheme: 'light' | 'dark' | 'system' = 'dark';
+    accentColor.set(defaultAccent);
+    theme.set(defaultTheme);
+    applyTheme(defaultTheme);
   }
 }
 
@@ -233,13 +225,7 @@ export async function resetToDefault() {
     currentTheme.set('default');
     themeManifest.set(null);
     // Save current_theme to settings
-    const settings = await invoke<any>('get_settings');
-    await invoke('save_settings', {
-      newSettings: {
-        ...settings,
-        current_theme: 'default',
-      },
-    });
+    await invoke('save_settings_merge', { patch: { current_theme: 'default' } });
   } catch (error) {
     console.error('Failed to reset to default theme:', error);
   }

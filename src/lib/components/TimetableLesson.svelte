@@ -41,12 +41,13 @@
   }
 </style>
 
-<div
-  class="lesson-block flex flex-col justify-start p-2 bg-white/95 backdrop-blur-sm rounded-xl border-l-4 shadow-lg hover:shadow-xl transition-all duration-200 dark:bg-slate-800/95 group cursor-pointer select-none h-full"
+<button
+  type="button"
+  class="lesson-block flex flex-col justify-start p-2 bg-white/95 backdrop-blur-sm rounded-xl border-l-4 shadow-lg hover:shadow-xl transition-all duration-200 dark:bg-slate-800/95 group cursor-pointer select-none h-full w-full text-left"
   style="border-color: {lesson.colour}; min-height: 54px;"
   class:expanded={expanded}
-  tabindex="0"
-  on:click={handleClick}
+  onclick={handleClick}
+  aria-label="Lesson: {lesson.description} from {lesson.from} to {lesson.until}"
 >
   <!-- Subject and Time Header -->
   <div class="flex justify-between items-center mb-0.5">
@@ -82,4 +83,4 @@
       </span>
     </div>
   {/if}
-</div> 
+</button> 

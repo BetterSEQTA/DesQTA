@@ -2,6 +2,7 @@
   import { fade, slide } from 'svelte/transition';
   import { Icon, ChevronDown, ChevronRight } from 'svelte-hero-icons';
   import type { Assessment } from '$lib/types';
+  import { DataTable, SearchInput, Badge } from '$lib/components/ui';
 
   export let data: Assessment[] = [];
   export let groupBySubject = true;

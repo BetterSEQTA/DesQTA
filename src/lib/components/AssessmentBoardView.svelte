@@ -1,5 +1,8 @@
 <script lang="ts">
   import AssessmentCard from './AssessmentCard.svelte';
+  import VirtualList from './VirtualList.svelte';
+  import VirtualAssessmentCard from './VirtualAssessmentCard.svelte';
+  import { Card, Badge, Button } from '$lib/components/ui';
 
   interface Assessment {
     id: number;
@@ -27,6 +30,9 @@
   }
 
   let { assessments, subjects, activeSubjects, groupBy, onGroupByChange }: Props = $props();
+  
+  // Assessment card height for virtual scrolling (estimated)
+  const ASSESSMENT_CARD_HEIGHT = 120;
 
   function getStatusBadge(status: string, due: string) {
     const dueDate = new Date(due);
@@ -121,7 +127,7 @@
                 <p class="text-sm text-slate-600 dark:text-slate-400">
                   {subject.code}
                   {#if activeSubjects && activeSubjects.some((as: any) => as.code === subject.code)}
-                    <span class="ml-2 text-xs bg-green-500 text-white px-2 py-0.5 rounded">Active</span>
+                    <Badge variant="success" size="xs" class="ml-2">Active</Badge>
                   {/if}
                 </p>
               </div>
@@ -129,9 +135,21 @@
             </div>
           </div>
           <div class="space-y-4">
-            {#each assessments.filter((a) => a.code === subject.code) as assessment}
-              <AssessmentCard {assessment} />
-            {/each}
+            {#if assessments.filter((a) => a.code === subject.code).length > 10}
+              <VirtualList
+                items={assessments.filter((a) => a.code === subject.code)}
+                itemHeight={ASSESSMENT_CARD_HEIGHT}
+                containerHeight={400}
+                keyFunction={(item) => item.id}>
+                {#snippet children({ item, index })}
+                  <VirtualAssessmentCard {item} {index} />
+                {/snippet}
+              </VirtualList>
+            {:else}
+              {#each assessments.filter((a) => a.code === subject.code) as assessment}
+                <AssessmentCard {assessment} />
+              {/each}
+            {/if}
           </div>
         </div>
       {/each}
@@ -148,9 +166,21 @@
             </p>
           </div>
           <div class="space-y-4">
-            {#each monthAssessments as assessment}
-              <AssessmentCard {assessment} showSubject={true} />
-            {/each}
+            {#if monthAssessments.length > 10}
+              <VirtualList
+                items={monthAssessments}
+                itemHeight={ASSESSMENT_CARD_HEIGHT}
+                containerHeight={400}
+                keyFunction={(item) => item.id}>
+                {#snippet children({ item, index })}
+                  <VirtualAssessmentCard {item} {index} showSubject={true} />
+                {/snippet}
+              </VirtualList>
+            {:else}
+              {#each monthAssessments as assessment}
+                <AssessmentCard {assessment} showSubject={true} />
+              {/each}
+            {/if}
           </div>
         </div>
       {/each}
@@ -169,9 +199,21 @@
             </p>
           </div>
           <div class="space-y-4">
-            {#each statusAssessments as assessment}
-              <AssessmentCard {assessment} showSubject={true} />
-            {/each}
+            {#if statusAssessments.length > 10}
+              <VirtualList
+                items={statusAssessments}
+                itemHeight={ASSESSMENT_CARD_HEIGHT}
+                containerHeight={400}
+                keyFunction={(item) => item.id}>
+                {#snippet children({ item, index })}
+                  <VirtualAssessmentCard {item} {index} showSubject={true} />
+                {/snippet}
+              </VirtualList>
+            {:else}
+              {#each statusAssessments as assessment}
+                <AssessmentCard {assessment} showSubject={true} />
+              {/each}
+            {/if}
           </div>
         </div>
       {/each}

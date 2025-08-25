@@ -9,6 +9,9 @@ const host = process.env.TAURI_DEV_HOST;
 function cssAsText() {
   return {
     name: 'css-as-text',
+    /**
+     * @param {string} id 
+     */
     load(id) {
       if (id.endsWith('.css?text')) {
         const cssPath = id.replace('?text', '');
@@ -44,4 +47,5 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  envPrefix: ['VITE_', 'TAURI_ENV_*', 'TAURI_'],
 }));

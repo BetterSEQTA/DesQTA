@@ -1,0 +1,373 @@
+/* Pink Girly Pop Theme - Global Styles */
+
+/* Import cute fonts */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Quicksand:wght@300;400;500;600;700&family=Dancing+Script:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&display=swap');
+
+:root {
+  --accent-color-value: #ff69b4;
+  --accent-color-hover: #ff1493;
+  --background-color: linear-gradient(135deg, #ffeef8 0%, #ffd1dc 50%, #ffb6c1 100%);
+  --surface-color: rgba(255, 182, 193, 0.3);
+  --text-color: #8b4874;
+  --border-color: #ff69b4;
+  --shadow-color: rgba(255, 105, 180, 0.3);
+  --font-family-primary: 'Nunito', 'Comic Sans MS', cursive;
+  --font-family-display: 'Dancing Script', 'Quicksand', cursive;
+  --sparkle-gradient: linear-gradient(45deg, #ff69b4, #ffb6c1, #ff1493, #ffc0cb);
+}
+
+html, body {
+  background: var(--background-color) !important;
+  font-family: var(--font-family-primary);
+  font-weight: 400;
+}
+
+/* Girly sparkle animations */
+@keyframes sparkle {
+  0%, 100% { 
+    transform: scale(1) rotate(0deg);
+    opacity: 0.8;
+  }
+  50% { 
+    transform: scale(1.1) rotate(180deg);
+    opacity: 1;
+  }
+}
+
+@keyframes floating-hearts {
+  0% { 
+    transform: translateY(0px) scale(1);
+    opacity: 0.7;
+  }
+  50% { 
+    transform: translateY(-10px) scale(1.05);
+    opacity: 1;
+  }
+  100% { 
+    transform: translateY(0px) scale(1);
+    opacity: 0.7;
+  }
+}
+
+@keyframes rainbow-border {
+  0% { border-color: #ff69b4; }
+  25% { border-color: #ff1493; }
+  50% { border-color: #ffb6c1; }
+  75% { border-color: #ffc0cb; }
+  100% { border-color: #ff69b4; }
+}
+
+/* Cute bouncy button animations */
+@keyframes bounce-in {
+  0% { transform: scale(0.3); }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+/* Girly components */
+.girly-card {
+  background: linear-gradient(135deg, rgba(255, 182, 193, 0.4) 0%, rgba(255, 192, 203, 0.6) 100%);
+  border: 2px solid rgba(255, 105, 180, 0.3);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  position: relative;
+  overflow: hidden;
+}
+
+.girly-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transform: rotate(45deg);
+  animation: sparkle 3s ease-in-out infinite;
+}
+
+.girly-button {
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  border: none;
+  border-radius: 25px;
+  color: white;
+  font-family: var(--font-family-primary);
+  font-weight: 600;
+  padding: 12px 24px;
+  box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.girly-button:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(255, 105, 180, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  background: linear-gradient(135deg, #ff1493 0%, #ff69b4 100%);
+}
+
+.girly-button:active {
+  transform: translateY(0) scale(0.98);
+  animation: bounce-in 0.6s ease;
+}
+
+.girly-button::after {
+  content: '✨';
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.girly-button:hover::after {
+  opacity: 1;
+  animation: sparkle 1s ease-in-out infinite;
+}
+
+/* Girly input fields */
+.girly-input {
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(255, 105, 180, 0.3);
+  border-radius: 15px;
+  padding: 12px 16px;
+  font-family: var(--font-family-primary);
+  color: var(--text-color);
+  box-shadow: 0 4px 15px rgba(255, 105, 180, 0.1);
+  transition: all 0.3s ease;
+}
+
+.girly-input:focus {
+  border-color: #ff69b4;
+  box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.2), 0 4px 15px rgba(255, 105, 180, 0.3);
+  outline: none;
+  transform: scale(1.02);
+}
+
+.girly-input::placeholder {
+  color: rgba(139, 72, 116, 0.6);
+  font-style: italic;
+}
+
+/* Header styling */
+.girly-header {
+  background: linear-gradient(135deg, rgba(255, 182, 193, 0.9) 0%, rgba(255, 105, 180, 0.8) 100%);
+  backdrop-filter: blur(15px);
+  border-bottom: 2px solid rgba(255, 105, 180, 0.3);
+  box-shadow: 0 4px 20px rgba(255, 105, 180, 0.2);
+}
+
+.girly-header h1 {
+  font-family: var(--font-family-display);
+  background: linear-gradient(135deg, #ff1493, #ff69b4, #ffb6c1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 2px 4px rgba(255, 105, 180, 0.3);
+}
+
+/* Sidebar styling */
+.girly-sidebar {
+  background: linear-gradient(180deg, rgba(255, 182, 193, 0.4) 0%, rgba(255, 192, 203, 0.6) 100%);
+  backdrop-filter: blur(15px);
+  border-right: 2px solid rgba(255, 105, 180, 0.3);
+  box-shadow: 4px 0 20px rgba(255, 105, 180, 0.15);
+}
+
+.girly-nav-item {
+  background: transparent;
+  border-radius: 15px;
+  margin: 4px 8px;
+  padding: 12px 16px;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.girly-nav-item:hover {
+  background: linear-gradient(135deg, rgba(255, 105, 180, 0.2) 0%, rgba(255, 182, 193, 0.3) 100%);
+  transform: translateX(4px) scale(1.02);
+  box-shadow: 0 4px 15px rgba(255, 105, 180, 0.2);
+}
+
+.girly-nav-item.active {
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  color: white;
+  transform: translateX(6px);
+  box-shadow: 0 6px 20px rgba(255, 105, 180, 0.4);
+}
+
+.girly-nav-item.active::before {
+  content: '💖';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  animation: floating-hearts 2s ease-in-out infinite;
+}
+
+/* Cute scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+  background: rgba(255, 182, 193, 0.2);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(255, 105, 180, 0.3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #ff1493 0%, #ff69b4 100%);
+  transform: scale(1.1);
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 240, 248, 0.5);
+  border-radius: 10px;
+}
+
+/* Accent classes for compatibility */
+.accent-bg {
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%) !important;
+  color: white !important;
+}
+
+.accent-bg-hover:hover {
+  background: linear-gradient(135deg, #ff1493 0%, #ff69b4 100%) !important;
+  transform: translateY(-2px) scale(1.05);
+}
+
+.accent-text {
+  color: #ff69b4 !important;
+  font-weight: 600;
+}
+
+.accent-border {
+  border-color: #ff69b4 !important;
+}
+
+.accent-ring {
+  --tw-ring-color: #ff69b4 !important;
+}
+
+.accent-shadow {
+  box-shadow: 0 4px 15px rgba(255, 105, 180, 0.3) !important;
+}
+
+.hover\:accent-shadow:hover {
+  box-shadow: 0 8px 25px rgba(255, 105, 180, 0.5) !important;
+}
+
+/* Special girly text effects */
+.girly-title {
+  font-family: var(--font-family-display);
+  background: var(--sparkle-gradient);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: sparkle 4s ease-in-out infinite;
+  text-shadow: 0 0 20px rgba(255, 105, 180, 0.5);
+}
+
+.girly-subtitle {
+  font-family: var(--font-family-primary);
+  color: var(--text-color);
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(255, 105, 180, 0.2);
+}
+
+/* Modal styling */
+.girly-modal {
+  background: linear-gradient(135deg, rgba(255, 240, 248, 0.95) 0%, rgba(255, 182, 193, 0.9) 100%);
+  backdrop-filter: blur(20px);
+  border: 2px solid rgba(255, 105, 180, 0.3);
+  border-radius: 25px;
+  box-shadow: 0 20px 60px rgba(255, 105, 180, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+}
+
+/* Cute loading spinner */
+.girly-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 105, 180, 0.2);
+  border-top: 4px solid #ff69b4;
+  border-radius: 50%;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Fun badge styles */
+.girly-badge {
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(255, 105, 180, 0.3);
+  animation: bounce-in 0.6s ease;
+}
+
+.girly-badge::before {
+  content: '✨ ';
+}
+
+.girly-badge::after {
+  content: ' ✨';
+}
+
+/* Ensure all text is readable in dark mode */
+.dark .girly-card {
+  background: linear-gradient(135deg, rgba(139, 72, 116, 0.4) 0%, rgba(255, 105, 180, 0.2) 100%);
+  color: #ffeef8;
+}
+
+.dark .girly-input {
+  background: rgba(139, 72, 116, 0.3);
+  color: #ffeef8;
+  border-color: rgba(255, 105, 180, 0.5);
+}
+
+.dark .girly-input::placeholder {
+  color: rgba(255, 238, 248, 0.6);
+}
+
+.dark .girly-sidebar {
+  background: linear-gradient(180deg, rgba(139, 72, 116, 0.4) 0%, rgba(255, 105, 180, 0.2) 100%);
+}
+
+.dark .girly-modal {
+  background: linear-gradient(135deg, rgba(139, 72, 116, 0.95) 0%, rgba(255, 105, 180, 0.8) 100%);
+  color: #ffeef8;
+}
+
+/* Global overrides for DesQTA compatibility */
+body {
+  font-family: var(--font-family-primary) !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-display) !important;
+  font-weight: 700 !important;
+}
+
+button {
+  font-family: var(--font-family-primary) !important;
+}
+
+input, textarea, select {
+  font-family: var(--font-family-primary) !important;
+}

@@ -2,6 +2,7 @@
   import { fade, scale } from 'svelte/transition';
   import { Icon, XMark } from 'svelte-hero-icons';
   import type { Snippet } from 'svelte';
+  import { Button } from '$lib/components/ui';
 
   interface Props {
     open: boolean;
@@ -76,12 +77,14 @@
       transition:scale={{ duration: 300, start: 0.9 }}>
       {#if showCloseButton}
         <div class="absolute top-6 right-6 z-10">
-          <button
-            class="flex justify-center items-center w-10 h-10 rounded-xl transition-all duration-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700"
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={XMark}
             onclick={closeModal}
-            aria-label="Close modal">
-            <Icon src={XMark} class="w-5 h-5 text-slate-700 dark:text-slate-300" />
-          </button>
+            ariaLabel="Close modal"
+            class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700"
+          />
         </div>
       {/if}
 

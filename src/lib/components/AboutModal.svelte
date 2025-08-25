@@ -222,12 +222,9 @@
           class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl border border-slate-200/40 dark:border-slate-700/40 p-4 sm:p-6 flex-1 flex flex-col justify-between min-h-[140px] sm:min-h-[160px]">
           <h3 class="mb-3 sm:mb-4 text-base sm:text-lg font-semibold text-slate-900 dark:text-white">Links</h3>
           <div class="space-y-3 sm:space-y-4">
-            <a
-              href="#"
-              onclick={(e) => {
-                e.preventDefault();
-                openUrl('https://github.com/betterseqta/desqta');
-              }}
+            <button
+              type="button"
+              onclick={() => openUrl('https://github.com/betterseqta/desqta')}
               class="flex items-center p-2 sm:p-3 space-x-2 sm:space-x-3 bg-slate-100 rounded-xl transition-all duration-200 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700 group">
               <div
                 class="flex justify-center items-center w-7 h-7 sm:w-8 sm:h-8 bg-slate-800 rounded-lg dark:bg-slate-200">
@@ -237,13 +234,10 @@
                 <div class="text-sm sm:text-base font-medium text-slate-900 dark:text-white">GitHub Repository</div>
                 <div class="text-xs text-slate-500 dark:text-slate-400">View source code</div>
               </div>
-            </a>
-            <a
-              href="#"
-              onclick={(e) => {
-                e.preventDefault();
-                openUrl('https://desqta.betterseqta.org');
-              }}
+            </button>
+            <button
+              type="button"
+              onclick={() => openUrl('https://desqta.betterseqta.org')}
               class="flex items-center p-2 sm:p-3 space-x-2 sm:space-x-3 bg-slate-100 rounded-xl transition-all duration-200 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700 group">
               <div
                 class="flex justify-center items-center w-7 h-7 sm:w-8 sm:h-8 bg-slate-800 rounded-lg dark:bg-slate-200">
@@ -260,7 +254,7 @@
                 <div class="text-sm sm:text-base font-medium text-slate-900 dark:text-white">Website</div>
                 <div class="text-xs text-slate-500 dark:text-slate-400">Official website</div>
               </div>
-            </a>
+            </button>
           </div>
         </div>
       </div>
