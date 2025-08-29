@@ -653,13 +653,13 @@
                             <!-- Content Container with Height Animation -->
                       <div
                         class="transition-all duration-500 ease-in-out overflow-hidden"
-                        style="height: {isMobile || loginMethod === 'qr' ? '420px' : '200px'};"
+                        style="height: {isMobile || loginMethod === 'qr' ? '350px' : '200px'};"
                       >
 
                 <!-- QR Code Method -->
                 {#if isMobile || loginMethod === 'qr'}
-                  <div class="space-y-4 px-2">
-                    <div class="text-center space-y-2">
+                  <div class="space-y-2 px-2">
+                    <div class="text-center space-y-1 -mt-2">
                       <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Quick Login</h2>
                       <p class="text-slate-600 dark:text-slate-400">Scan your SEQTA QR code to sign in instantly</p>
                     </div>
@@ -675,7 +675,7 @@
                       />
                       <label
                         for="qr-upload"
-                        class="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-indigo-300/60 dark:border-indigo-600/60 rounded-2xl cursor-pointer bg-white/5 dark:bg-slate-800/5 backdrop-blur-xl hover:bg-white/15 dark:hover:bg-slate-800/15 transition-all duration-300 group hover:border-indigo-400/80 dark:hover:border-indigo-500/80 hover:scale-[1.02]"
+                        class="flex flex-col items-center justify-center w-full h-[10.6rem] border-2 border-dashed border-indigo-300/60 dark:border-indigo-600/60 rounded-2xl cursor-pointer bg-white/5 dark:bg-slate-800/5 backdrop-blur-xl hover:bg-white/15 dark:hover:bg-slate-800/15 transition-all duration-300 group hover:border-indigo-400/80 dark:hover:border-indigo-500/80 hover:scale-[1.02]"
                       >
                         <div class="flex flex-col items-center space-y-4">
                           <div class="p-4 bg-white/15 dark:bg-slate-800/20 backdrop-blur-xl rounded-full group-hover:scale-110 transition-transform duration-200 border border-white/20 dark:border-slate-700/20">
@@ -692,7 +692,7 @@
                     <!-- Divider -->
                     <div class="flex items-center">
                       <div class="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-600 to-transparent"></div>
-                      <span class="px-4 text-sm text-slate-500 dark:text-slate-400 font-medium">or</span>
+                      <span class="px-2 text-sm text-slate-500 dark:text-slate-400 font-medium">or</span>
                       <div class="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-600 to-transparent"></div>
                     </div>
 
@@ -749,7 +749,7 @@
                             }
                           }}
                           placeholder="school.seqta.com.au"
-                          inputClass="w-full py-4 px-6 bg-white/10 dark:bg-slate-800/10 backdrop-blur-xl border border-white/20 dark:border-slate-700/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent transition-all duration-300 hover:border-indigo-300/60 dark:hover:border-indigo-600/60 focus:bg-white/20 dark:focus:bg-slate-800/20"
+                          inputClass="w-full py-4 px-6 text-base bg-white/10 dark:bg-slate-800/10 backdrop-blur-xl border border-white/20 dark:border-slate-700/20 rounded-2xl text-slate-900 dark:text-white placeholder:text-base placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent transition-all duration-300 hover:border-indigo-300/60 dark:hover:border-indigo-600/60 focus:bg-white/20 dark:focus:bg-slate-800/20"
                         />
                       </div>
                     </div>
