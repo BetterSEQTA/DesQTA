@@ -1,0 +1,51 @@
+{
+  "name": "Neon Cyber",
+  "version": "1.0.0",
+  "description": "A futuristic cyberpunk theme with neon accents, glitch effects, and terminal-inspired typography. Perfect for those who love that dystopian future aesthetic.",
+  "author": "DesQTA Team",
+  "license": "MIT",
+  "compatibility": {
+    "minVersion": "1.0.0",
+    "maxVersion": "2.0.0"
+  },
+  "preview": {
+    "thumbnail": "/themes/neon-cyber/preview.png",
+    "screenshots": ["/themes/neon-cyber/screenshot1.png"]
+  },
+  "settings": {
+    "defaultAccentColor": "#00ff41",
+    "defaultTheme": "dark",
+    "supportsLightMode": false,
+    "supportsDarkMode": true,
+    "supportsSystemMode": true
+  },
+  "customProperties": {
+    "primaryColor": "#00ff41",
+    "secondaryColor": "#ff0080",
+    "successColor": "#00ff41",
+    "warningColor": "#ffaa00",
+    "errorColor": "#ff0040",
+    "backgroundColor": "#0a0a0f",
+    "surfaceColor": "#1a1a2e",
+    "textColor": "#00ff41",
+    "borderColor": "#00ff41",
+    "shadowColor": "rgba(0, 255, 65, 0.5)"
+  },
+  "fonts": {
+    "primary": "'JetBrains Mono', 'Fira Code', 'Courier New', monospace",
+    "secondary": "'Orbitron', 'Exo 2', 'Arial', sans-serif",
+    "monospace": "'JetBrains Mono', 'Fira Code', monospace",
+    "display": "'Orbitron', 'Exo 2', futuristic, sans-serif"
+  },
+  "animations": {
+    "duration": "200ms",
+    "easing": "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+    "enableEnhanced": true
+  },
+  "features": {
+    "customScrollbars": true,
+    "glassmorphism": false,
+    "gradients": true,
+    "shadows": true
+  }
+}

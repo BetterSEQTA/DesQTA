@@ -3,13 +3,14 @@
   import { seqtaFetch } from '../../utils/netUtil';
   import { cache } from '../../utils/cache';
   import { saveAs } from 'file-saver';
+  import { getWithIdbFallback, setIdb } from '$lib/services/idbCache';
   import jsPDF from 'jspdf';
   import autoTable from 'jspdf-autotable';
   import * as pdfjsLib from 'pdfjs-dist';
   import TimetableHeader from '$lib/components/TimetableHeader.svelte';
   import TimetableGrid from '$lib/components/TimetableGrid.svelte';
   import TimetablePdfViewer from '$lib/components/TimetablePdfViewer.svelte';
-  import { createEvents, EventStatus } from 'ics';
+  import { createEvents, type EventStatus } from 'ics';
 
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -72,7 +73,7 @@
 
     try {
       const cacheKey = `timetable_${from}_${until}`;
-      const cachedLessons = cache.get<any[]>(cacheKey);
+      const cachedLessons = cache.get<any[]>(cacheKey) || await getWithIdbFallback<any[]>(cacheKey, cacheKey, () => cache.get<any[]>(cacheKey));
       if (cachedLessons) {
         lessons = cachedLessons;
         loadingLessons = false;
@@ -96,6 +97,8 @@
       });
 
       cache.set(cacheKey, lessons, 30);
+      console.info('[IDB] timetable cached (mem+idb)', { key: cacheKey, count: lessons.length });
+      await setIdb(cacheKey, lessons);
     } catch (e) {
       error = 'Failed to load timetable. Please try again.';
       console.error('Error loading timetable:', e);
@@ -289,7 +292,7 @@
   });
 </script>
 
-<div class="flex flex-col w-full h-full bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800 text-slate-900 dark:text-slate-50 min-h-screen">
+<div class="flex flex-col w-full h-full text-slate-900 dark:text-slate-50 min-h-screen" style="background: var(--background-color);">
   <TimetableHeader
     {weekStart}
     {loadingLessons}

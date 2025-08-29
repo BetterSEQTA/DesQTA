@@ -5,38 +5,37 @@
   import AppHeader from '../lib/components/AppHeader.svelte';
   import AppSidebar from '../lib/components/AppSidebar.svelte';
   import LoginScreen from '../lib/components/LoginScreen.svelte';
+  import LoadingScreen from '../lib/components/LoadingScreen.svelte';
+  import ThemeBuilder from '../lib/components/ThemeBuilder.svelte';
   import { authService, type UserInfo } from '../lib/services/authService';
   import { weatherService, type WeatherData } from '../lib/services/weatherService';
-  import { errorService } from '../lib/services/errorService';
-
-  import { onMount, onDestroy } from 'svelte';
+  import { warmUpCommonData } from '../lib/services/warmupService';
+  import { logger } from '../utils/logger';
+  import { seqtaFetch } from '../utils/netUtil';
   import '../app.css';
   import { accentColor, loadAccentColor, theme, loadTheme, loadCurrentTheme } from '../lib/stores/theme';
-  import { Icon } from 'svelte-hero-icons';
-  import {
-    Home,
-    Newspaper,
-    ClipboardDocumentList,
-    BookOpen,
-    ChatBubbleLeftRight,
-    DocumentText,
-    AcademicCap,
-    ChartBar,
-    Cog6Tooth,
-    CalendarDays,
-    User,
-  } from 'svelte-hero-icons';
-
+  import { themeBuilderSidebarOpen } from '../lib/stores/themeBuilderSidebar';
+  import { Icon, Home, Newspaper, ClipboardDocumentList, BookOpen, ChatBubbleLeftRight, DocumentText, AcademicCap, ChartBar, Cog6Tooth, CalendarDays, User, GlobeAlt, XMark, PencilSquare } from 'svelte-hero-icons';
   import { writable } from 'svelte/store';
-  import { seqtaFetch } from '../utils/netUtil';
-  import LoadingScreen from '../lib/components/LoadingScreen.svelte';
   import { page } from '$app/stores';
+  import { onMount, onDestroy } from 'svelte';
   export const needsSetup = writable(false);
 
-  let seqtaUrl = $state<string>('');
-  let userInfo = $state<UserInfo | undefined>(undefined);
   let { children } = $props();
 
+  // Core state
+  let seqtaUrl = $state<string>('');
+  let userInfo = $state<UserInfo | undefined>(undefined);
+  let seqtaConfig: any = $state(null);
+  let isLoading = $state(true);
+  let isMobile = $state(false);
+  
+  // UI state  
+  let sidebarOpen = $state(true);
+  let showUserDropdown = $state(false);
+  let showAboutModal = $state(false);
+  
+  // Weather state
   let weatherEnabled = $state(false);
   let forceUseLocation = $state(true);
   let weatherCity = $state('');
@@ -44,110 +43,161 @@
   let weatherData = $state<WeatherData | null>(null);
   let loadingWeather = $state(false);
   let weatherError = $state('');
-
-  let isMobileMenuOpen = $state(false);
-  let isMobile = $state(false);
-
-  let sidebarOpen = $state(true);
-  let isDarkMode = $derived($theme === 'dark');
-  let notifications = $state([]);
-  let unreadNotifications = $state(0);
-
-  let showUserDropdown = $state(false);
-  let showAboutModal = $state(false);
-  let isLoading = $state(true);
-
+  
+  // Settings state
   let disableSchoolPicture = $state(false);
-
   let enhancedAnimations = $state(true);
   let autoCollapseSidebar = $state(false);
   let autoExpandSidebarHover = $state(false);
+  // Menu configuration
+  const DEFAULT_MENU = [
+    { label: 'Dashboard', icon: Home, path: '/' },
+    { label: 'Courses', icon: BookOpen, path: '/courses' },
+    { label: 'Assessments', icon: ClipboardDocumentList, path: '/assessments' },
+    { label: 'Timetable', icon: CalendarDays, path: '/timetable' },
+    { label: 'Study', icon: PencilSquare, path: '/study' },
+    { label: 'Messages', icon: ChatBubbleLeftRight, path: '/direqt-messages' },
+    { label: 'Portals', icon: GlobeAlt, path: '/portals' },
+    { label: 'Notices', icon: DocumentText, path: '/notices' },
+    { label: 'News', icon: Newspaper, path: '/news' },
+    { label: 'Directory', icon: User, path: '/directory' },
+    { label: 'Reports', icon: ChartBar, path: '/reports' },
+    { label: 'Analytics', icon: AcademicCap, path: '/analytics' },
+    { label: 'Settings', icon: Cog6Tooth, path: '/settings' },
+  ];
+  let menu = $state([...DEFAULT_MENU]);
+  let menuLoading = $state(true);
+  let devMockEnabled = false;
 
-  function handleClickOutside(event: MouseEvent) {
+
+
+  const handleClickOutside = (event: MouseEvent) => {
     const target = event.target as Element;
     if (!target.closest('.user-dropdown-container')) {
       showUserDropdown = false;
     }
-  }
+  };
 
-  async function checkSession() {
-    const sessionExists = await authService.checkSession();
-    needsSetup.set(!sessionExists);
-    if (sessionExists) {
-      loadUserInfo();
+  const checkSession = async () => {
+    logger.logFunctionEntry('layout', 'checkSession');
+    try {
+      if (devMockEnabled) {
+        needsSetup.set(false);
+        logger.info('layout', 'checkSession', 'Dev mock enabled; bypassing login');
+        await Promise.all([loadUserInfo(), loadSeqtaConfigAndMenu()]);
+        logger.logFunctionExit('layout', 'checkSession', { sessionExists: true });
+      } else {
+        const sessionExists = await authService.checkSession();
+        needsSetup.set(!sessionExists);
+        logger.info('layout', 'checkSession', `Session exists: ${sessionExists}`, { sessionExists });
+        if (sessionExists) {
+          await Promise.all([loadUserInfo(), loadSeqtaConfigAndMenu()]);
+        }
+        logger.logFunctionExit('layout', 'checkSession', { sessionExists });
+      }
+    } catch (error) {
+      logger.error('layout', 'checkSession', `Failed to check session: ${error}`, { error });
     }
-  }
+  };
 
-  onMount(checkSession);
+  // Remove duplicate onMount - consolidating below
 
   let unlisten: (() => void) | undefined;
-  onMount(async () => {
+  
+  const setupServiceWorkerAndListeners = async () => {
+    // Register service worker for offline static assets
+    if ('serviceWorker' in navigator) {
+      try {
+        await navigator.serviceWorker.register('/sw.js');
+      } catch {}
+    }
+    logger.debug('layout', 'onMount', 'Setting up reload listener');
     unlisten = await listen<string>('reload', () => {
+      logger.info('layout', 'reload_listener', 'Received reload event');
       location.reload();
     });
-  });
+  };
 
   onDestroy(() => {
-    if (unlisten) unlisten();
+    logger.logComponentUnmount('layout');
+    if (unlisten) {
+      logger.debug('layout', 'onDestroy', 'Cleaning up reload listener');
+      unlisten();
+    }
   });
 
-  // Function to reload enhanced animations setting
-  async function reloadEnhancedAnimationsSetting() {
+  // Consolidated settings loader
+  const loadSettings = async (keys: string[]) => {
     try {
-      const settings = await invoke<{ enhanced_animations?: boolean }>('get_settings');
-      enhancedAnimations = settings.enhanced_animations ?? true;
-      console.log('Enhanced animations setting reloaded:', enhancedAnimations);
+      const subset = await invoke<any>('get_settings_subset', { keys });
+      return subset || {};
     } catch (e) {
-      console.error('Failed to reload enhanced animations setting:', e);
+      logger.error('layout', 'loadSettings', `Failed to load settings: ${e}`, { keys, error: e });
+      return {};
     }
-  }
+  };
 
-  // Function to reload auto collapse sidebar setting
-  async function reloadAutoCollapseSidebarSetting() {
-    try {
-      const settings = await invoke<{ auto_collapse_sidebar?: boolean }>('get_settings');
-      autoCollapseSidebar = settings.auto_collapse_sidebar ?? false;
-      console.log('Auto collapse sidebar setting reloaded:', autoCollapseSidebar);
-    } catch (e) {
-      console.error('Failed to reload auto collapse sidebar setting:', e);
-    }
-  }
+  const reloadEnhancedAnimationsSetting = async () => {
+    const settings = await loadSettings(['enhanced_animations']);
+    enhancedAnimations = settings.enhanced_animations ?? true;
+    logger.debug('layout', 'reloadEnhancedAnimationsSetting', `Enhanced animations: ${enhancedAnimations}`);
+  };
 
-  // Function to reload auto expand sidebar hover setting
-  async function reloadAutoExpandSidebarHoverSetting() {
-    try {
-      const settings = await invoke<{ auto_expand_sidebar_hover?: boolean }>('get_settings');
-      autoExpandSidebarHover = settings.auto_expand_sidebar_hover ?? false;
-      console.log('Auto expand sidebar hover setting reloaded:', autoExpandSidebarHover);
-    } catch (e) {
-      console.error('Failed to reload auto expand sidebar hover setting:', e);
-    }
-  }
+  const reloadSidebarSettings = async () => {
+    const settings = await loadSettings(['auto_collapse_sidebar', 'auto_expand_sidebar_hover']);
+    autoCollapseSidebar = settings.auto_collapse_sidebar ?? false;
+    autoExpandSidebarHover = settings.auto_expand_sidebar_hover ?? false;
+  };
 
-  // Function to handle page navigation with auto-collapse
-  function handlePageNavigation() {
-    if (autoCollapseSidebar) {
+  const handlePageNavigation = () => {
+    if (autoCollapseSidebar || isMobile) {
       sidebarOpen = false;
     }
-  }
+  };
 
-  // Function to handle mouse hover for auto-expand
-  function handleMouseMove(event: MouseEvent) {
+  const handleMouseMove = (event: MouseEvent) => {
     if (autoExpandSidebarHover && !isMobile) {
       const x = event.clientX;
-      
       if (!sidebarOpen && x <= 20) {
-        // Expand sidebar when hovering near left edge
         sidebarOpen = true;
       } else if (sidebarOpen && x > 280) {
-        // Collapse sidebar when mouse moves away from sidebar area (sidebar width is ~256px + some buffer)
         sidebarOpen = false;
       }
     }
-  }
+  };
 
-  async function startLogin() {
-    if (!seqtaUrl) return;
+  const healthCheck = async () => {
+    try {
+      const response = await seqtaFetch('/seqta/student/heartbeat', {
+        method: 'POST',
+        body: {
+          timestamp: '1970-01-01 00:00:00.0',
+          hash: '#?page=/home'
+        }
+      });
+
+      const responseStr = typeof response === 'string' ? response : JSON.stringify(response);
+      if (
+        responseStr.includes('"status":"401"') ||
+        responseStr.includes('"status":401') ||
+        responseStr.toLowerCase().includes('unauthorized')
+      ) {
+        logger.warn('layout', 'healthCheck', 'Heartbeat returned 401, logging out');
+        await handleLogout();
+      }
+    } catch (e) {
+      // Network errors should not auto-logout; log and continue
+      logger.debug('layout', 'healthCheck', 'Heartbeat check failed', { error: e });
+    }
+  };
+
+  const startLogin = async () => {
+    if (!seqtaUrl) {
+      logger.error('layout', 'startLogin', 'No valid SEQTA URL found');
+      return;
+    }
+
+    logger.info('layout', 'startLogin', 'Starting authentication', { url: seqtaUrl });
     await authService.startLogin(seqtaUrl);
 
     const timer = setInterval(async () => {
@@ -155,71 +205,38 @@
       if (sessionExists) {
         clearInterval(timer);
         needsSetup.set(false);
-        await loadUserInfo();
+        await Promise.all([loadUserInfo(), loadSeqtaConfigAndMenu()]);
       }
     }, 1000);
 
     setTimeout(() => clearInterval(timer), 5 * 60 * 1000);
-  }
+  };
 
-  async function handleLogout() {
+  const handleLogout = async () => {
     const success = await authService.logout();
     if (success) {
-      // Immediately clear user info and close dropdown
       userInfo = undefined;
       showUserDropdown = false;
       await checkSession();
     }
-  }
+  };
 
-  async function loadSettingsForUserPicture() {
-    try {
-      const settings = await invoke<{
-        disable_school_picture?: boolean;
-      }>('get_settings');
-      console.log('Loaded settings for user picture:', settings);
-      disableSchoolPicture = settings.disable_school_picture ?? false;
-      console.log('disableSchoolPicture set to:', disableSchoolPicture);
-    } catch (e) {
-      console.error('Failed to load settings for user picture:', e);
-      disableSchoolPicture = false;
-    }
-  }
-
-  async function loadUserInfo() {
-    await loadSettingsForUserPicture();
+  const loadUserInfo = async () => {
+    const settings = await loadSettings(['disable_school_picture']);
+    disableSchoolPicture = settings.disable_school_picture ?? false;
     userInfo = await authService.loadUserInfo({ disableSchoolPicture });
-  }
+  };
 
-  async function loadWeatherSettings() {
+  const loadWeatherSettings = async () => {
     const settings = await weatherService.loadWeatherSettings();
     weatherEnabled = settings.weather_enabled;
     weatherCity = settings.weather_city;
     weatherCountry = settings.weather_country ?? '';
     forceUseLocation = settings.force_use_location;
-  }
+  };
 
-  async function fetchWeatherWithIP() {
-    if (!weatherEnabled) {
-      weatherData = null;
-      return;
-    }
-
-    loadingWeather = true;
-    weatherError = '';
-
-    try {
-      weatherData = await weatherService.fetchWeatherWithIP();
-    } catch (e) {
-      weatherError = `Failed to load weather: ${e}`;
-      weatherData = null;
-    } finally {
-      loadingWeather = false;
-    }
-  }
-
-  async function fetchWeather() {
-    if (!weatherEnabled || !weatherCity) {
+  const fetchWeather = async (useIP = false) => {
+    if (!weatherEnabled || (!useIP && !weatherCity)) {
       weatherData = null;
       return;
     }
@@ -227,33 +244,31 @@
     loadingWeather = true;
     weatherError = '';
     try {
-      weatherData = await weatherService.fetchWeather(weatherCity, weatherCountry);
+      weatherData = useIP 
+        ? await weatherService.fetchWeatherWithIP()
+        : await weatherService.fetchWeather(weatherCity, weatherCountry);
     } catch (e) {
       weatherError = `Failed to load weather: ${e}`;
       weatherData = null;
     } finally {
       loadingWeather = false;
     }
-  }
+  };
 
   $effect(() => {
     document.documentElement.setAttribute('data-accent-color', '');
     document.documentElement.style.setProperty('--accent-color-value', $accentColor);
+    logger.debug('layout', '$effect', 'Applied accent color to root as CSS var', { accent: $accentColor });
   });
 
-  async function loadEnhancedAnimationsSetting() {
-    try {
-      const settings = await invoke<{ enhanced_animations?: boolean }>('get_settings');
-      enhancedAnimations = settings.enhanced_animations ?? true;
-      console.log('Enhanced animations setting loaded:', enhancedAnimations);
-    } catch (e) {
-      console.error('Failed to load enhanced animations setting:', e);
-      enhancedAnimations = true;
-    }
-  }
+  const loadEnhancedAnimationsSetting = async () => {
+    const settings = await loadSettings(['enhanced_animations']);
+    enhancedAnimations = settings.enhanced_animations ?? true;
+    logger.info('layout', 'loadEnhancedAnimationsSetting', 'Setting loaded', { enhancedAnimations });
+  };
 
   $effect(() => {
-    console.log('Enhanced animations effect triggered:', enhancedAnimations);
+    logger.debug('layout', '$effect', 'Enhanced animations effect triggered', { enhancedAnimations });
     if (enhancedAnimations) {
       document.body.classList.add('enhanced-animations');
     } else {
@@ -262,107 +277,145 @@
   });
 
   onMount(async () => {
+    logger.logComponentMount('layout');
+    setupServiceWorkerAndListeners();
+    
+    // Initialize theme first
     await Promise.all([
-      checkSession(),
-      loadWeatherSettings(),
       loadAccentColor(),
       loadTheme(),
       loadCurrentTheme(),
-      loadEnhancedAnimationsSetting(),
-      reloadAutoCollapseSidebarSetting(),
-      reloadAutoExpandSidebarHoverSetting()
     ]);
+
+    // Load dev mock flag early to control session flow
+    try {
+      const settings = await loadSettings(['dev_sensitive_info_hider']);
+      devMockEnabled = settings.dev_sensitive_info_hider ?? false;
+    } catch {}
+
+    // Load all settings and check session
+    await Promise.all([
+      checkSession(),
+      loadWeatherSettings(),
+      loadEnhancedAnimationsSetting(),
+      reloadSidebarSettings()
+    ]);
+    
+    // Background tasks
+    warmUpCommonData().catch(() => {});
     if (weatherEnabled) {
-      if (forceUseLocation) fetchWeather();
-      else fetchWeatherWithIP();
+      fetchWeather(!forceUseLocation);
     }
 
-    // Check SEQTA cookie/session on app launch
-    if (!($needsSetup)) {
+    // Validate SEQTA session on app launch
+    if (!devMockEnabled && !$needsSetup) {
       try {
-        const appUrl = seqtaUrl || 'https://learn.cardijn.catholic.edu.au/#?page=/home';
         const response = await seqtaFetch('/seqta/student/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: {
-            mode: 'normal',
-            query: null,
-            redirect_url: appUrl,
-          },
+          body: { mode: 'normal', query: null, redirect_url: seqtaUrl },
         });
-        // Debug: log the raw response
-        console.debug('SEQTA session check response:', response);
+        
         const responseStr = typeof response === 'string' ? response : JSON.stringify(response);
-        const foundAbbrev = responseStr.includes('site.name.abbrev');
-        console.debug('Contains site.name.abbrev:', foundAbbrev);
-        if (foundAbbrev) {
-          console.debug('Triggering handleLogout() due to detected logout');
+        const isAuthenticated = responseStr.includes('site.name.abbrev');
+        
+        if (!isAuthenticated && (responseStr.includes('error') || responseStr.includes('unauthorized') || responseStr.includes('401'))) {
+          logger.warn('layout', 'onMount', 'Session invalid, logging out');
           await handleLogout();
         }
       } catch (e) {
-        console.error('SEQTA session check failed', e);
+        logger.error('layout', 'onMount', 'SEQTA session check failed', { error: e });
       }
     }
+    
+    // Run a one-time heartbeat health check on app open
+    await healthCheck();
     isLoading = false;
   });
 
-  // Effect to handle page navigation and auto-collapse sidebar
+  // Consolidated effects
   $effect(() => {
-    if (autoCollapseSidebar) {
-      handlePageNavigation();
-    }
+    if (autoCollapseSidebar) handlePageNavigation();
+    if ($needsSetup) sidebarOpen = false;
+    if ($page.url.pathname === '/settings') reloadSidebarSettings();
   });
 
-  // Reload auto collapse sidebar setting when navigating to settings
-  $effect(() => {
-    if ($page.url.pathname === '/settings') {
-      reloadAutoCollapseSidebarSetting();
-      reloadAutoExpandSidebarHoverSetting();
-    }
-  });
-
-  // Force sidebar closed when on login screen
-  $effect(() => {
-    if ($needsSetup) {
-      sidebarOpen = false;
-    }
-  });
-
+  // Mobile detection and event listeners
   onMount(() => {
     const checkMobile = () => {
-      isMobile = window.innerWidth < 768;
-      if (isMobile) {
-        sidebarOpen = false;
-      }
+      const platform = import.meta.env.TAURI_ENV_PLATFORM;
+      isMobile = platform === 'ios' || platform === 'android';
+      if (isMobile) sidebarOpen = false;
     };
 
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    document.addEventListener('click', handleClickOutside);
+    const events = [
+      ['resize', checkMobile],
+      ['click', handleClickOutside],
+      ['mousemove', handleMouseMove]
+    ] as const;
     
-    // Add mouse event listeners for auto-expand hover
-    document.addEventListener('mousemove', handleMouseMove);
+    events.forEach(([event, handler]) => 
+      document.addEventListener(event, handler as EventListener)
+    );
 
-    return () => {
-      window.removeEventListener('resize', checkMobile);
-      document.removeEventListener('click', handleClickOutside);
-      document.removeEventListener('mousemove', handleMouseMove);
-    };
+    return () => events.forEach(([event, handler]) => 
+      document.removeEventListener(event, handler as EventListener)
+    );
   });
 
-  const menu = [
-    { label: 'Dashboard', icon: Home, path: '/' },
-    { label: 'Courses', icon: BookOpen, path: '/courses' },
-    { label: 'Assessments', icon: ClipboardDocumentList, path: '/assessments' },
-    { label: 'Timetable', icon: CalendarDays, path: '/timetable' },
-    { label: 'Messages', icon: ChatBubbleLeftRight, path: '/direqt-messages' },
-    { label: 'Notices', icon: DocumentText, path: '/notices' },
-    { label: 'News', icon: Newspaper, path: '/news' },
-    { label: 'Directory', icon: User, path: '/directory' },
-    { label: 'Reports', icon: ChartBar, path: '/reports' },
-    { label: 'Settings', icon: Cog6Tooth, path: '/settings' },
-    { label: 'Analytics', icon: AcademicCap, path: '/analytics' },
-  ];
+  
+
+  const loadSeqtaConfigAndMenu = async () => {
+    try {
+      if (!devMockEnabled) {
+        const sessionExists = await authService.checkSession();
+        if (!sessionExists) {
+          logger.debug('layout', 'loadSeqtaConfigAndMenu', 'Skipping: not authenticated');
+          return;
+        }
+      }
+
+      let config = await invoke('load_seqta_config');
+      let latestConfig = null;
+      
+      if (!config) {
+        // Fetch latest config
+        const res = await seqtaFetch('/seqta/student/load/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {},
+        });
+        latestConfig = typeof res === 'string' ? JSON.parse(res) : res;
+        seqtaConfig = latestConfig;
+        await invoke('save_seqta_config', { config: latestConfig });
+      } else {
+        // Check if existing config is outdated
+        const res = await seqtaFetch('/seqta/student/load/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {},
+        });
+        latestConfig = typeof res === 'string' ? JSON.parse(res) : res;
+        const isDifferent = await invoke('is_seqta_config_different', { newConfig: latestConfig });
+        
+        if (isDifferent) {
+          seqtaConfig = latestConfig;
+          await invoke('save_seqta_config', { config: latestConfig });
+        } else {
+          seqtaConfig = config;
+        }
+      }
+      
+      menu = [...DEFAULT_MENU]; // Use default menu configuration
+    } catch (e) {
+      logger.error('layout', 'loadSeqtaConfigAndMenu', 'Failed to load config/menu', { error: e });
+    } finally {
+      menuLoading = false;
+    }
+  };
+
+  // Config/menu loading is handled in checkSession/startLogin
 </script>
 
 {#if isLoading}
@@ -381,18 +434,33 @@
         onLogout={handleLogout}
         onShowAbout={() => (showAboutModal = true)}
         onClickOutside={handleClickOutside}
-        disableSchoolPicture={disableSchoolPicture}
+        {disableSchoolPicture}
       />
     {/if}
 
-    <div class="flex flex-1 min-h-0">
-      {#if !$needsSetup}
+    <div class="flex flex-1 min-h-0 relative">
+      {#if !$needsSetup && !menuLoading}
         <AppSidebar {sidebarOpen} {menu} onMenuItemClick={handlePageNavigation} />
       {/if}
 
+      <!-- Mobile Sidebar Overlay -->
+      {#if sidebarOpen && isMobile && !$needsSetup}
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+          class="fixed inset-0 z-20 bg-black/50 sm:hidden"
+          onclick={() => (sidebarOpen = false)}
+          role="button"
+          tabindex="0"
+          aria-label="Close sidebar overlay">
+        </div>
+      {/if}
+
+      <!-- Main Content -->
       <main
-        class="overflow-y-auto flex-1 border-t {!$needsSetup ? 'border-l' : ''} border-slate-200 dark:border-slate-700/50"
-        style="background: var(--background-color);">
+        class="overflow-y-auto flex-1 border-t {!$needsSetup ? 'border-l' : ''} border-slate-200 dark:border-slate-700/50 transition-all duration-200"
+        style="background: var(--background-color); margin-right: {$themeBuilderSidebarOpen ? '384px' : '0'};"
+      >
         {#if $needsSetup}
           <LoginScreen
             {seqtaUrl}
@@ -403,21 +471,24 @@
           {@render children()}
         {/if}
       </main>
+
+      <!-- ThemeBuilder Sidebar -->
+      {#if $themeBuilderSidebarOpen}
+        <aside class="fixed top-0 right-0 h-full w-96 z-50 bg-white dark:bg-slate-900 shadow-xl border-l border-slate-200 dark:border-slate-700 flex flex-col transition-transform duration-200">
+          <ThemeBuilder>
+            {#snippet close()}
+              <button 
+                class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors ml-auto" 
+                onclick={() => themeBuilderSidebarOpen.set(false)} 
+                aria-label="Close Theme Builder"
+              >
+                <Icon src={XMark} class="w-6 h-6" />
+              </button>
+            {/snippet}
+          </ThemeBuilder>
+        </aside>
+      {/if}
     </div>
   </div>
 {/if}
-
-<!-- Mobile Menu Overlay -->
-{#if isMobileMenuOpen}
-  <div
-    class="fixed inset-0 z-40 bg-black/50"
-    onclick={() => (isMobileMenuOpen = false)}
-    onkeydown={(e) => e.key === 'Escape' && (isMobileMenuOpen = false)}
-    role="button"
-    tabindex="0"
-    aria-label="Close mobile menu">
-  </div>
-{/if}
-
-<!-- About Modal -->
 <AboutModal bind:open={showAboutModal} onclose={() => (showAboutModal = false)} />

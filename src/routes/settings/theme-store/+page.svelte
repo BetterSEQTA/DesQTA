@@ -3,40 +3,63 @@
   import { themeService, type ThemeManifest } from '$lib/services/themeService';
   import { loadAndApplyTheme, currentTheme } from '$lib/stores/theme';
   import { get } from 'svelte/store';
+  import { themeBuilderSidebarOpen } from '$lib/stores/themeBuilderSidebar';
+  import { Icon, Swatch, ShoppingCart, PaintBrush, Eye, CheckCircle } from 'svelte-hero-icons';
 
   let availableThemes: ThemeManifest[] = [];
   let selectedTheme: ThemeManifest | null = null;
   let loading = true;
   let error: string | null = null;
   let currentThemeName = 'default';
-  let imgErrors: boolean[] = [];
-  let themeOptions: any = {};
-  let showAdvanced = false;
-  let showFeatures = false;
-  let showFonts = false;
-  let showAnimations = false;
-  let showCustom = false;
+  let themeCategories: { id: string; name: string }[] = [];
+  
+  // Store-like features
+  let searchQuery = '';
+  let selectedCategory = 'all';
+  let rotateInterval: any = null;
+  let currentSlide = 0;
+  
+  const slides = [
+    {
+      title: 'Discover your look',
+      description: 'Browse themes crafted for DesQTA — clean, vibrant, and fast.',
+    },
+    {
+      title: 'Make it yours',
+      description: 'Pick a theme that matches your vibe. Switch instantly.',
+    },
+    {
+      title: 'Create and share',
+      description: 'Use Theme Builder to design your own theme in minutes.',
+    }
+  ];
 
-  // Load all themes from static/themes/*
+  // Load all themes dynamically from both static and custom directories
   async function loadThemes() {
     loading = true;
     error = null;
     try {
-      // List all theme directories manually (since getAvailableThemes is hardcoded)
-      const themeNames = [
-        'default', 'sunset', 'light', 'mint', 'grape', 'midnight', 'bubblegum', 'solarized', 'glass', 'aero'
-      ];
+      // Get available theme names from backend
+      const themeNames = await themeService.getAvailableThemes();
+      
+      // Load manifests for all available themes
       const themePromises = themeNames.map(async (name) => {
         try {
           return await themeService.getThemeManifest(name);
-        } catch {
+        } catch (err) {
+          console.warn(`Failed to load theme manifest for ${name}:`, err);
           return null;
         }
       });
+      
       const themes = await Promise.all(themePromises);
       availableThemes = themes.filter((t): t is ThemeManifest => t !== null);
+      themeCategories = generateCategories(availableThemes);
+      
+      console.log(`Loaded ${availableThemes.length} themes:`, availableThemes.map(t => t.name));
     } catch (e) {
-      error = 'Failed to load themes.';
+      console.error('Failed to load themes:', e);
+      error = 'Failed to load themes. Please try again.';
     } finally {
       loading = false;
     }
@@ -56,17 +79,26 @@
     currentTheme.subscribe((val) => {
       currentThemeName = val;
     });
+
+    rotateInterval = setInterval(() => {
+      currentSlide = (currentSlide + 1) % slides.length;
+    }, 5000);
   });
+
+  // Cleanup rotation timer
+  if (typeof window !== 'undefined') {
+    addEventListener('beforeunload', () => clearInterval(rotateInterval));
+  }
 
   async function handleApplyTheme(themeName: string) {
     await loadAndApplyTheme(themeName);
     selectedTheme = null;
+    // Reload to ensure all assets and classes apply consistently
+    location.reload();
   }
 
   function openThemeModal(theme: ThemeManifest) {
     selectedTheme = theme;
-    // Deep copy to avoid mutating the manifest directly
-    themeOptions = JSON.parse(JSON.stringify(theme));
   }
 
   function closeThemeModal() {
@@ -83,90 +115,293 @@
     return `background: ${theme.customProperties.backgroundColor}`;
   }
 
-  function handleOptionChange(section: string, key: string, value: any) {
-    if (section === 'settings') themeOptions.settings[key] = value;
-    if (section === 'customProperties') themeOptions.customProperties[key] = value;
-    if (section === 'features') themeOptions.features[key] = value;
-    if (section === 'fonts') themeOptions.fonts[key] = value;
-    if (section === 'animations') themeOptions.animations[key] = value;
-    // Live apply custom properties
-    themeService.setCustomProperties(themeOptions.customProperties);
-    themeService.setThemeFonts(themeOptions.fonts);
+  function getThemePreviewImage(theme: ThemeManifest): string | null {
+    const thumb = (theme as any)?.preview?.thumbnail as string | undefined;
+    if (!thumb) return null;
+    if (thumb.startsWith('http') || thumb.startsWith('tauri://') || thumb.startsWith('/themes/')) {
+      return thumb;
+    }
+    if (thumb.startsWith('/')) {
+      return thumb;
+    }
+    // Assume relative to the theme directory
+    return `/themes/${getThemeId(theme)}/${thumb}`;
   }
 
-  async function handleApplyThemeWithOptions() {
-    if (!selectedTheme) return;
-    themeService.setCustomProperties(themeOptions.customProperties);
-    themeService.setThemeFonts(themeOptions.fonts);
-    await handleApplyTheme(selectedTheme.name.toLowerCase());
-    selectedTheme = null;
+  function generateCategories(themes: ThemeManifest[]) {
+    const set = new Set<string>();
+    themes.forEach(t => {
+      if (t.category) set.add(t.category);
+    });
+    const cats = Array.from(set).sort().map((c) => ({ id: c, name: capitalizeName(c) }));
+    return [{ id: 'all', name: 'All' }, ...cats, { id: 'custom', name: 'Custom' }];
   }
 
   function capitalizeName(name: string) {
     return name.charAt(0).toUpperCase() + name.slice(1);
   }
+
+  async function handleThemeDeleted(themeName: string) {
+    try {
+      await themeService.deleteCustomTheme(themeName);
+      // Reload themes to reflect the deletion
+      await loadThemes();
+      // Refresh the page to ensure stale styles/manifests are gone
+      location.reload();
+      
+      // If the deleted theme was the current theme, switch to default
+      if (currentThemeName === themeName) {
+        await handleApplyTheme('default');
+      }
+    } catch (error) {
+      console.error('Failed to delete theme:', error);
+    }
+  }
+
+  async function handleThemeCreated() {
+    // Reload themes to show the new custom theme
+    await loadThemes();
+  }
+  
+  function getFilteredThemes() {
+    let filtered = availableThemes;
+    
+    // Filter by search
+    if (searchQuery) {
+      filtered = filtered.filter(theme => 
+        theme.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        theme.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        theme.author.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(theme => {
+        if (selectedCategory === 'custom') return theme.category === 'custom';
+        return (theme.category || '').toLowerCase() === selectedCategory.toLowerCase();
+      });
+    }
+    
+    // Simple sort by name
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
+    
+    return filtered;
+  }
+  
+  // Get theme ID (directory name) from theme object
+  function getThemeId(theme: ThemeManifest): string {
+    // Map display names to directory names
+    const nameMapping: {[key: string]: string} = {
+      'Pink Dream': 'pink-dream',
+      'Neon Cyber': 'neon-cyber'
+    };
+    
+    return nameMapping[theme.name] || theme.name.toLowerCase().replace(/\s+/g, '-');
+  }
   
 </script>
 
-<div class="p-8 max-w-5xl mx-auto">
-  <div class="flex justify-between items-center mb-8">
-    <div class="flex items-center gap-4">
-      <a 
-        href="/settings" 
-        class="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-        </svg>
-        Back to Settings
-      </a>
-    <h1 class="text-3xl font-bold">Theme Store</h1>
+<!-- Theme Store Header -->
+<div class="relative overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-b border-slate-200 dark:border-slate-700">
+  <div class="absolute inset-0 bg-[url('/api/placeholder/1920/400')] opacity-5"></div>
+  <div class="relative px-6 py-12 max-w-7xl mx-auto">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+      <div class="space-y-4">
+        <div class="flex items-center gap-3">
+          <a 
+            href="/settings" 
+            class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Back
+          </a>
+          <div class="h-8 w-px bg-slate-300 dark:bg-slate-600"></div>
+          <Icon src={ShoppingCart} class="w-8 h-8 text-slate-700 dark:text-slate-300" />
+          <h1 class="text-4xl font-bold text-slate-900 dark:text-white">Theme Store</h1>
+        </div>
+        <div class="relative w-full max-w-3xl">
+          <div class="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md">
+            <div class="p-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm min-h-[120px] transition-all duration-200">
+              <div class="text-2xl font-bold text-slate-900 dark:text-white">{slides[currentSlide].title}</div>
+              <div class="text-slate-600 dark:text-slate-300 mt-2">{slides[currentSlide].description}</div>
+            </div>
+            <div class="flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-900/50">
+              <div class="flex gap-1">
+                {#each slides as _, idx}
+                  <span class="h-1.5 w-8 rounded-full {currentSlide === idx ? 'accent-bg' : 'bg-slate-300 dark:bg-slate-700'} transition-all"></span>
+                {/each}
+              </div>
+              <div class="flex gap-2">
+                <button class="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" onclick={() => currentSlide = (currentSlide - 1 + slides.length) % slides.length}>‹</button>
+                <button class="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" onclick={() => currentSlide = (currentSlide + 1) % slides.length}>›</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex flex-col sm:flex-row gap-4">
+        <div class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div class="text-sm text-slate-600 dark:text-slate-400 mb-1">Currently Active</div>
+          <div class="font-semibold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+            <Icon src={CheckCircle} class="w-5 h-5 text-green-500" />
+            {capitalizeName(currentThemeName)}
+          </div>
+        </div>
+        <button
+          class="flex items-center gap-2 px-6 py-3 rounded-xl accent-bg hover:accent-bg-hover text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 accent-ring focus:ring-offset-2"
+          onclick={() => themeBuilderSidebarOpen.set(true)}
+        >
+          <Icon src={Swatch} class="w-5 h-5" />
+          Theme Builder
+        </button>
+      </div>
     </div>
-   <div class="text-sm text-slate-600 dark:text-slate-400">Current theme: {capitalizeName(currentThemeName)}</div>
   </div>
+</div>
+
+<!-- Store Navigation & Filters -->
+<div class="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-b border-slate-200 dark:border-slate-700">
+  <div class="px-6 py-4 max-w-7xl mx-auto">
+    <div class="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
+      <!-- Search Bar -->
+      <div class="relative flex-1 max-w-md">
+        <input 
+          type="text" 
+          placeholder="Search themes..."
+          bind:value={searchQuery}
+          class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 accent-ring focus:border-transparent transition-all duration-200"
+        />
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center">
+          <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+        </div>
+      </div>
+      
+      <!-- Category Filters -->
+      <div class="flex items-center gap-2 overflow-x-auto">
+        {#each themeCategories as category}
+          <button
+            class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-200 {selectedCategory === category.id ? 'accent-bg text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}"
+            onclick={() => selectedCategory = category.id}
+          >
+            <Icon src={PaintBrush} class="w-4 h-4" />
+            {category.name}
+          </button>
+        {/each}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="px-6 py-8 max-w-7xl mx-auto">
 
   {#if loading}
     <div class="flex justify-center items-center py-16">
       <div class="flex flex-col gap-4 items-center">
-        <div class="w-8 h-8 rounded-full border-4 animate-spin border-accent/30 border-t-accent"></div>
-        <p class="text-sm text-slate-600 dark:text-slate-400">Loading themes...</p>
+        <div class="w-12 h-12 rounded-full border-4 animate-spin border-slate-200 dark:border-slate-700 border-t-accent"></div>
+        <p class="text-lg text-slate-600 dark:text-slate-400">Loading amazing themes...</p>
       </div>
     </div>
   {:else if error}
-    <div class="text-red-500 text-center py-8">{error}</div>
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-8 text-center">
+      <div class="text-red-600 dark:text-red-400 text-lg font-semibold mb-2">Oops! Something went wrong</div>
+      <p class="text-red-500 dark:text-red-300">{error}</p>
+    </div>
   {:else}
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-      {#each availableThemes as theme, i (theme.name)}
-        <div
-          class="rounded-xl shadow-lg p-6 flex flex-col items-center bg-white/10 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 transition-all duration-200 hover:scale-105 hover:shadow-2xl cursor-pointer {currentThemeName === theme.name.toLowerCase() ? 'ring-2 ring-accent' : ''}"
-          on:click={() => openThemeModal(theme)}
-        >
-          {#if !imgErrors[i]}
-            <img
-              src={theme.preview.thumbnail}
-              alt={theme.name + ' preview'}
-              class="w-16 h-16 rounded-full mb-4 border-2 object-cover"
-              style="border-color: {theme.customProperties.primaryColor}; {getThemePreviewStyle(theme)}"
-              on:error={() => imgErrors[i] = true}
-            />
-          {:else}
-            <div class="w-16 h-16 rounded-full mb-4 border-2 flex items-center justify-center" style="border-color: {theme.customProperties.primaryColor}; {getThemePreviewStyle(theme)}">
-              <span class="text-xs text-slate-400">No Image</span>
+    <!-- Theme Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {#each getFilteredThemes() as theme, i (theme.name)}
+        <div class="relative group">
+            <!-- Grid Card -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
+              <!-- Theme Preview -->
+              <div class="relative h-48 overflow-hidden" style="{getThemePreviewStyle(theme)}">
+                {#if getThemePreviewImage(theme)}
+                  <img src={getThemePreviewImage(theme)} alt={`${theme.name} preview`} class="absolute inset-0 w-full h-full object-cover" />
+                {/if}
+                <div class="absolute inset-0 bg-gradient-to-br from-black/10 to-black/30"></div>
+                <div class="absolute top-3 left-3 flex gap-2">
+                  {#if currentThemeName === getThemeId(theme)}
+                    <span class="px-2 py-1 text-xs font-medium bg-green-500 text-white rounded-full flex items-center gap-1">
+                      <Icon src={CheckCircle} class="w-3 h-3" />
+                      Active
+                    </span>
+                  {/if}
+                </div>
+              </div>
+              
+              <!-- Theme Info -->
+              <div class="p-6">
+                <div class="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-1">{theme.name}</h3>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">by {theme.author}</p>
+                  </div>
+                </div>
+                
+                <p class="text-sm text-slate-600 dark:text-slate-400 mb-4 line-clamp-2">{theme.description}</p>
+                
+                <div class="flex items-center justify-between mb-4 text-xs text-slate-500 dark:text-slate-400">
+                    <span>v{theme.version}</span>
+                </div>
+                
+                <div class="flex gap-2">
+                  <button
+                    class="flex-1 px-4 py-2 accent-bg hover:accent-bg-hover text-white font-medium rounded-xl transition-colors"
+                    onclick={() => openThemeModal(theme)}
+                  >
+                    <Icon src={Eye} class="w-4 h-4 inline mr-2" />
+                    Preview
+                  </button>
+                  {#if currentThemeName !== getThemeId(theme)}
+                    <button
+                      class="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 font-medium rounded-xl transition-colors"
+                      onclick={() => handleApplyTheme(getThemeId(theme))}
+                    >
+                      Apply
+                    </button>
+                  {/if}
+                </div>
+              </div>
+              
+              {#if theme.category === 'custom'}
+                <button
+                  type="button"
+                  onclick={() => handleThemeDeleted(theme.name)}
+                  class="absolute top-3 right-12 p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors bg-white/20 backdrop-blur-sm rounded-full"
+                  aria-label="Delete custom theme"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                </button>
+              {/if}
             </div>
-          {/if}
-          <div class="font-semibold text-lg mb-2">{theme.name}</div>
-          <div class="text-sm text-slate-500 dark:text-slate-400 mb-4 text-center">{theme.description}</div>
-          <div class="flex gap-2 items-center text-xs text-slate-400">
-            <span>v{theme.version}</span>
-            <span>•</span>
-            <span>by {theme.author}</span>
-          </div>
-          {#if currentThemeName === theme.name.toLowerCase()}
-            <div class="mt-2 px-2 py-1 text-xs bg-accent text-white rounded-full">Active</div>
-          {/if}
         </div>
       {/each}
     </div>
+    
+    {#if getFilteredThemes().length === 0}
+      <div class="text-center py-16">
+        <div class="w-24 h-24 mx-auto mb-6 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
+          <Icon src={PaintBrush} class="w-12 h-12 text-slate-400" />
+        </div>
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-2">No themes found</h3>
+        <p class="text-slate-600 dark:text-slate-400 mb-6">Try adjusting your search or filter criteria.</p>
+        <button
+          class="px-6 py-3 accent-bg hover:accent-bg-hover text-white font-medium rounded-xl transition-colors"
+          onclick={() => { searchQuery = ''; selectedCategory = 'all'; }}
+        >
+          Clear Filters
+        </button>
+      </div>
+    {/if}
 
     {#if selectedTheme}
       <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
@@ -176,162 +411,60 @@
         >
           <button
             class="absolute top-4 right-4 text-xl text-white bg-black/30 rounded-full w-8 h-8 flex items-center justify-center hover:bg-black/60 transition"
-            on:click={closeThemeModal}
+            onclick={closeThemeModal}
           >
             ×
           </button>
           <div class="flex flex-col h-full">
+            <!-- Simulated App Layout Preview -->
             <div class="flex h-64">
-              <div
-                class="w-20 flex flex-col items-center py-4"
-                style="background: {selectedTheme.customProperties.primaryColor}"
-              >
-                <div class="w-8 h-8 rounded-lg bg-white/80 mb-4"></div>
-                <div class="w-8 h-8 rounded-lg bg-white/60 mb-4"></div>
-                <div class="w-8 h-8 rounded-lg bg-white/40 mb-4"></div>
-                <div class="w-8 h-8 rounded-lg bg-white/20"></div>
+              <!-- Sidebar -->
+              <div class="w-56 p-3 flex flex-col gap-2 bg-white/85 dark:bg-slate-900/70" style="border-right: 1px solid {selectedTheme.customProperties.borderColor || '#334155'}">
+                <div class="h-8 rounded-lg" style="background: {selectedTheme.customProperties.accentColor || selectedTheme.customProperties.primaryColor || '#3b82f6'}"></div>
+                <div class="h-6 rounded bg-slate-200/80 dark:bg-slate-800/80"></div>
+                <div class="h-6 rounded bg-slate-200/80 dark:bg-slate-800/80"></div>
+                <div class="h-6 rounded bg-slate-200/80 dark:bg-slate-800/80"></div>
+                <div class="mt-auto h-6 rounded bg-slate-200/60 dark:bg-slate-800/60"></div>
               </div>
-              <div class="flex-1 flex flex-col">
-                <div
-                  class="h-12 flex items-center px-6 text-white"
-                  style="background: {selectedTheme.customProperties.primaryColor}"
-                >
-                  <span class="font-bold text-lg">DesQTA</span>
-                  <span class="ml-auto text-sm opacity-80">User</span>
+              <!-- Main -->
+              <div class="flex-1 flex flex-col" style="background: {selectedTheme.customProperties.backgroundColor}">
+                <!-- Topbar -->
+                <div class="h-10 flex items-center px-4 text-white" style="background: {selectedTheme.customProperties.accentColor || selectedTheme.customProperties.primaryColor || '#3b82f6'}">
+                  <span class="font-semibold">DesQTA</span>
+                  <div class="ml-auto flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-full bg-white/70"></div>
+                    <div class="w-16 h-4 rounded bg-white/50"></div>
+                  </div>
                 </div>
-                <div class="flex-1 bg-white/80 dark:bg-slate-900/80 p-6 flex flex-col gap-4">
-                  <div class="h-6 w-1/3 rounded bg-slate-300 dark:bg-slate-700 mb-2"></div>
-                  <div class="h-4 w-2/3 rounded bg-slate-200 dark:bg-slate-800 mb-2"></div>
-                  <div class="h-4 w-1/2 rounded bg-slate-200 dark:bg-slate-800 mb-2"></div>
-                  <div class="h-32 rounded-lg bg-slate-100 dark:bg-slate-800"></div>
+                <!-- Content -->
+                <div class="flex-1 p-4" style="color: {selectedTheme.customProperties.textColor || '#0f172a'}">
+                  <div class="h-6 w-1/3 rounded mb-3" style="background: rgba(148,163,184,0.35)"></div>
+                  <div class="grid grid-cols-3 gap-3 mb-3">
+                    <div class="h-20 rounded" style="background: rgba(148,163,184,0.25)"></div>
+                    <div class="h-20 rounded" style="background: rgba(148,163,184,0.25)"></div>
+                    <div class="h-20 rounded" style="background: rgba(148,163,184,0.25)"></div>
+                  </div>
+                  <div class="h-32 rounded" style="background: rgba(148,163,184,0.2)"></div>
                 </div>
               </div>
             </div>
             <div class="flex-1 overflow-y-auto px-6 pt-6 pb-2">
               <div class="font-semibold text-lg mb-2 text-slate-800 dark:text-white">{selectedTheme.name} Theme</div>
-              <div class="text-sm text-slate-700 dark:text-slate-200 mb-4 text-center">{selectedTheme.description}</div>
-              <!-- Theme Options Section -->
-              <div class="w-full max-w-3xl mx-auto mb-4 p-6 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-md">
-                <div class="accent-bg accent-text px-4 py-2 rounded-lg shadow font-medium text-base mb-4 transition-colors duration-200">
-                  Theme Options
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-                  <!-- Accent Color -->
-                  <div class="flex items-center gap-2">
-                    <label class="block text-base font-medium flex-1 text-slate-800 dark:text-white" for="accentColor">Accent Color</label>
-                    <div class="flex items-center gap-2">
-                      <input id="accentColor" aria-label="Accent Color" type="color" class="w-10 h-10 border border-gray-300 rounded-lg shadow focus:ring-2 focus:ring-accent transition-all" bind:value={themeOptions.settings.defaultAccentColor} on:input={e => handleOptionChange('settings', 'defaultAccentColor', (e.target && (e.target as HTMLInputElement).value) || themeOptions.settings.defaultAccentColor)} />
-                      <span class="w-8 h-8 rounded-lg border border-gray-300" style="background: {themeOptions.settings.defaultAccentColor}"></span>
-                    </div>
-                  </div>
-                  <!-- Default Theme -->
-                  <div>
-                    <label class="block text-base font-medium mb-1 text-slate-800 dark:text-white" for="defaultTheme">Default Theme</label>
-                    <select id="defaultTheme" aria-label="Default Theme" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 shadow px-3 py-2 focus:ring-2 focus:ring-accent transition-all bg-white dark:bg-gray-900 text-base text-slate-800 dark:text-white" bind:value={themeOptions.settings.defaultTheme} on:change={e => handleOptionChange('settings', 'defaultTheme', (e.target && (e.target as HTMLSelectElement).value) || themeOptions.settings.defaultTheme)}>
-                      <option value="light">Light</option>
-                      <option value="dark">Dark</option>
-                      <option value="system">System</option>
-                    </select>
-                  </div>
-                </div>
-                <!-- Advanced Options Accordion -->
-                <div class="mb-2">
-                  <button class="w-full flex items-center justify-between px-4 py-2 rounded-lg bg-slate-200 dark:bg-gray-700 text-slate-800 dark:text-slate-200 font-medium shadow transition-all duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-accent" on:click={() => showAdvanced = !showAdvanced} aria-expanded={showAdvanced} aria-controls="advanced-options">
-                    Advanced Options
-                    <svg class="w-5 h-5 ml-2 transition-transform duration-200" style="transform: rotate({showAdvanced ? 90 : 0}deg);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                  </button>
-                  {#if showAdvanced}
-                    <div id="advanced-options" class="mt-4 space-y-4">
-                      <!-- Features Accordion -->
-                      <div>
-                        <button class="w-full flex items-center justify-between px-3 py-2 rounded bg-slate-100 dark:bg-gray-800 text-slate-800 dark:text-slate-200 font-medium shadow transition-all duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-accent" on:click={() => showFeatures = !showFeatures} aria-expanded={showFeatures} aria-controls="features-options">
-                          Features
-                          <svg class="w-4 h-4 ml-2 transition-transform duration-200" style="transform: rotate({showFeatures ? 90 : 0}deg);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                        </button>
-                        {#if showFeatures}
-                          <div id="features-options" class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                            {#each Object.keys(themeOptions.features) as feat}
-                              <div class="flex items-center gap-2">
-                                <input id={feat} aria-label={feat} type="checkbox" class="accent-bg accent-ring rounded focus:ring-2 focus:ring-accent transition-all w-5 h-5" checked={themeOptions.features[feat]} on:change={e => handleOptionChange('features', feat, (e.target && (e.target as HTMLInputElement).checked) || false)} />
-                                <label class="text-base font-medium text-slate-800 dark:text-white" for={feat}>{feat}</label>
-                              </div>
-                            {/each}
-                          </div>
-                        {/if}
-                      </div>
-                      <!-- Fonts Accordion -->
-                      <div>
-                        <button class="w-full flex items-center justify-between px-3 py-2 rounded bg-slate-100 dark:bg-gray-800 text-slate-800 dark:text-slate-200 font-medium shadow transition-all duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-accent" on:click={() => showFonts = !showFonts} aria-expanded={showFonts} aria-controls="fonts-options">
-                          Fonts
-                          <svg class="w-4 h-4 ml-2 transition-transform duration-200" style="transform: rotate({showFonts ? 90 : 0}deg);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                        </button>
-                        {#if showFonts}
-                          <div id="fonts-options" class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                            {#each Object.keys(themeOptions.fonts) as fontKey}
-                              <div>
-                                <label class="block text-base font-medium mb-1 text-slate-800 dark:text-white" for={fontKey + '-font'}>{fontKey} font</label>
-                                <input id={fontKey + '-font'} aria-label={fontKey + ' font'} type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 shadow px-3 py-2 focus:ring-2 focus:ring-accent transition-all bg-white dark:bg-gray-900 text-base text-slate-800 dark:text-white" bind:value={themeOptions.fonts[fontKey]} on:input={e => handleOptionChange('fonts', fontKey, (e.target && (e.target as HTMLInputElement).value) || themeOptions.fonts[fontKey])} />
-                              </div>
-                            {/each}
-                          </div>
-                        {/if}
-                      </div>
-                      <!-- Animations Accordion -->
-                      <div>
-                        <button class="w-full flex items-center justify-between px-3 py-2 rounded bg-slate-100 dark:bg-gray-800 text-slate-800 dark:text-slate-200 font-medium shadow transition-all duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-accent" on:click={() => showAnimations = !showAnimations} aria-expanded={showAnimations} aria-controls="animations-options">
-                          Animations
-                          <svg class="w-4 h-4 ml-2 transition-transform duration-200" style="transform: rotate({showAnimations ? 90 : 0}deg);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                        </button>
-                        {#if showAnimations}
-                          <div id="animations-options" class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                            {#each Object.keys(themeOptions.animations) as animKey}
-                              <div>
-                                <label class="block text-base font-medium mb-1 text-slate-800 dark:text-white" for={animKey + '-anim'}>{animKey}</label>
-                                <input id={animKey + '-anim'} aria-label={animKey} type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 shadow px-3 py-2 focus:ring-2 focus:ring-accent transition-all bg-white dark:bg-gray-900 text-base text-slate-800 dark:text-white" bind:value={themeOptions.animations[animKey]} on:input={e => handleOptionChange('animations', animKey, (e.target && (e.target as HTMLInputElement).value) || themeOptions.animations[animKey])} />
-                              </div>
-                            {/each}
-                          </div>
-                        {/if}
-                      </div>
-                      <!-- Custom Properties Accordion -->
-                      <div>
-                        <button class="w-full flex items-center justify-between px-3 py-2 rounded bg-slate-100 dark:bg-gray-800 text-slate-800 dark:text-slate-200 font-medium shadow transition-all duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-accent" on:click={() => showCustom = !showCustom} aria-expanded={showCustom} aria-controls="custom-options">
-                          Custom Properties
-                          <svg class="w-4 h-4 ml-2 transition-transform duration-200" style="transform: rotate({showCustom ? 90 : 0}deg);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                        </button>
-                        {#if showCustom}
-                          <div id="custom-options" class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                            {#each Object.keys(themeOptions.customProperties) as prop}
-                              <div class="flex items-center gap-2">
-                                <label class="block text-base font-medium flex-1 text-slate-800 dark:text-white" for={prop}>{prop}</label>
-                                {#if themeOptions.customProperties[prop]?.startsWith('#') || themeOptions.customProperties[prop]?.startsWith('rgb')}
-                                  <input id={prop} aria-label={prop} type="color" class="w-10 h-10 border border-gray-300 rounded-lg shadow focus:ring-2 focus:ring-accent transition-all" value={themeOptions.customProperties[prop]} on:input={e => handleOptionChange('customProperties', prop, (e.target && (e.target as HTMLInputElement).value) || themeOptions.customProperties[prop])} />
-                                  <span class="w-8 h-8 rounded-lg border border-gray-300" style="background: {themeOptions.customProperties[prop]}"></span>
-                                {:else}
-                                  <input id={prop} aria-label={prop} type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 shadow px-3 py-2 focus:ring-2 focus:ring-accent transition-all bg-white dark:bg-gray-900 text-base text-slate-800 dark:text-white" bind:value={themeOptions.customProperties[prop]} on:input={e => handleOptionChange('customProperties', prop, (e.target && (e.target as HTMLInputElement).value) || themeOptions.customProperties[prop])} />
-                                {/if}
-                              </div>
-                            {/each}
-                          </div>
-                        {/if}
-                      </div>
-                    </div>
-                  {/if}
-                </div>
-              </div>
+              <div class="text-sm text-slate-700 dark:text-slate-200 mb-2 text-center">{selectedTheme.description}</div>
+              <div class="text-xs text-slate-500 dark:text-slate-400 text-center">by {selectedTheme.author} • v{selectedTheme.version}</div>
             </div>
             <!-- Sticky action buttons -->
             <div class="flex gap-4 justify-center items-center p-6 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 z-10">
               <button
                 class="px-4 py-2 rounded-lg font-semibold text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent accent-bg hover:accent-bg-hover active:scale-95"
-                on:click={handleApplyThemeWithOptions}
+                onclick={() => selectedTheme && handleApplyTheme(getThemeId(selectedTheme))}
               >
                 Apply Theme
               </button>
               {#if currentThemeName !== 'default'}
                 <button
                   class="px-4 py-2 rounded-lg font-semibold text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600 active:scale-95"
-                  on:click={() => handleApplyTheme('default')}
+                  onclick={() => handleApplyTheme('default')}
                 >
                   Reset to Default
                 </button>

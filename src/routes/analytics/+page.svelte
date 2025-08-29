@@ -3,49 +3,30 @@
   import { invoke } from '@tauri-apps/api/core';
   import type { AnalyticsData, Assessment } from '$lib/types';
   import { seqtaFetch } from '../../utils/netUtil';
-  import { Icon, ChevronDown, ChevronRight } from 'svelte-hero-icons';
-  import { fade, slide, scale } from 'svelte/transition';
+  import { fade } from 'svelte/transition';
+  import { Button } from '$lib/components/ui';
   import Modal from '$lib/components/Modal.svelte';
   import RawDataTable from '$lib/components/RawDataTable.svelte';
   import GradeDistribution from '$lib/components/GradeDistribution.svelte';
+  import AnalyticsChart from '$lib/components/analytics/AnalyticsChart.svelte';
+  import AssessmentFilters from '$lib/components/analytics/AssessmentFilters.svelte';
 
-  let analyticsData: AnalyticsData | null = null;
-  let loading = true;
-  let error: string | null = null;
-  let showGrabData = false;
-  let showDeleteModal = false;
-  let deleteLoading = false;
-  let deleteError: string | null = null;
-
-  // Graph dimensions
-  const width = 800;
-  const height = 400;
-  const padding = 40;
-  const barWidth = 60;
-  const barSpacing = 20;
-
-  let barPaths: { path: string; count: number; status: string }[] = [];
-  let yLabels: string[] = [];
+  let analyticsData: AnalyticsData | null = $state(null);
+  let loading = $state(true);
+  let error: string | null = $state(null);
+  let showGrabData = $state(false);
+  let showDeleteModal = $state(false);
+  let deleteLoading = $state(false);
+  let deleteError: string | null = $state(null);
 
   const studentId = 69;
 
-  let expandedSubjects: Record<string, boolean> = {};
-
   // Filter state
-  let filterSubject = '';
-  let filterStatus = '';
-  let filterMinGrade: number | null = null;
-  let filterMaxGrade: number | null = null;
-  let filterSearch = '';
-
-  // For the line graph
-  const graphWidth = 800;
-  const graphHeight = 200;
-  const graphPadding = 50;
-  const yTicks = [0, 20, 40, 60, 80, 100];
-
-  // Tooltip state for the line graph
-  let tooltip = { show: false, x: 0, y: 0, month: '', avg: 0 };
+  let filterSubject = $state('');
+  let filterStatus = $state('');
+  let filterMinGrade: number | null = $state(null);
+  let filterMaxGrade: number | null = $state(null);
+  let filterSearch = $state('');
 
   function isValidDate(dateStr: string): boolean {
     const date = new Date(dateStr);
@@ -76,13 +57,7 @@
         finalGrade: data.finalGrade ? Number(data.finalGrade) : undefined,
       };
 
-      // Validate required fields
-      if (
-        !assessment.id ||
-        !assessment.title ||
-        !assessment.subject ||
-        !isValidDate(assessment.due)
-      ) {
+      if (!assessment.id || !assessment.title || !assessment.subject || !isValidDate(assessment.due)) {
         return null;
       }
 
@@ -93,17 +68,7 @@
     }
   }
 
-  async function deleteAnalytics() {
-    const confirmed = window.confirm('Are you sure you want to delete all analytics data?');
-    if (!confirmed) return;
-    try {
-      await invoke('delete_analytics');
-      analyticsData = null;
-      showGrabData = true;
-    } catch (e) {
-      error = 'Failed to delete analytics data';
-    }
-  }
+
 
   async function grabData() {
     loading = true;
@@ -203,105 +168,20 @@
       console.log('Valid assessments:', validAssessments);
       analyticsData = validAssessments;
       showGrabData = false;
-      processData();
+
     } catch (e) {
-      console.error('Error loading analytics:', e);
-      error = e instanceof Error ? e.message : 'Failed to load analytics data';
+      // Do not use console.error here to avoid global error page; show local recovery UI instead
+      console.warn('Analytics: no local analytics file found or failed to parse. Prompting user to rebuild.');
+      error = 'No analytics data found. Click the button below to download and build your assessment analytics.';
       showGrabData = true;
     } finally {
       loading = false;
     }
   });
 
-  function processData() {
-    console.log('Processing data:', analyticsData);
-    if (!analyticsData || !Array.isArray(analyticsData) || analyticsData.length === 0) {
-      console.log('No assessments data available');
-      return;
-    }
 
-    // Filter for assessments with grades and group them into ranges
-    const gradedAssessments = analyticsData.filter((a) => a.finalGrade !== undefined);
-    const gradeRanges = {
-      '90-100': 0,
-      '80-89': 0,
-      '70-79': 0,
-      '60-69': 0,
-      '50-59': 0,
-      '0-49': 0,
-    };
 
-    gradedAssessments.forEach((assessment) => {
-      const grade = assessment.finalGrade!;
-      if (grade >= 90) gradeRanges['90-100']++;
-      else if (grade >= 80) gradeRanges['80-89']++;
-      else if (grade >= 70) gradeRanges['70-79']++;
-      else if (grade >= 60) gradeRanges['60-69']++;
-      else if (grade >= 50) gradeRanges['50-59']++;
-      else gradeRanges['0-49']++;
-    });
 
-    const maxCount = Math.max(...Object.values(gradeRanges), 1);
-    const yScale = (height - padding * 2) / maxCount;
-
-    // Generate y-axis labels at intervals of 10
-    const yStep = Math.max(10, (Math.ceil(maxCount / 10) * 10) / 10); // At least 10, or enough to keep ~10 labels
-    yLabels = [];
-    for (let i = 0; i <= maxCount; i += yStep) {
-      yLabels.push(i.toString());
-    }
-    if (yLabels[yLabels.length - 1] !== maxCount.toString()) {
-      yLabels.push(maxCount.toString());
-    }
-
-    // Generate bar paths
-    barPaths = Object.entries(gradeRanges).map(([range, count], index) => {
-      const x = padding + index * (barWidth + barSpacing);
-      const barHeight = count * yScale;
-      const path = `M ${x} ${height - padding} h ${barWidth} v -${barHeight} h -${barWidth} Z`;
-      return { path, count, status: range };
-    });
-  }
-
-  function getStatusColor(status: string): string {
-    const grade = parseInt(status.split('-')[0]);
-    if (grade >= 90) return 'rgb(34, 197, 94)'; // green
-    if (grade >= 80) return 'rgb(34, 197, 94)'; // green
-    if (grade >= 70) return 'rgb(234, 179, 8)'; // yellow
-    if (grade >= 60) return 'rgb(234, 179, 8)'; // yellow
-    if (grade >= 50) return 'rgb(239, 68, 68)'; // red
-    return 'rgb(239, 68, 68)'; // red
-  }
-
-  function getLetterGrade(percentage: number | undefined): string {
-    if (percentage === undefined) return '';
-    if (percentage >= 90) return 'A+';
-    if (percentage >= 85) return 'A';
-    if (percentage >= 80) return 'A-';
-    if (percentage >= 75) return 'B+';
-    if (percentage >= 70) return 'B';
-    if (percentage >= 65) return 'B-';
-    if (percentage >= 60) return 'C+';
-    if (percentage >= 55) return 'C';
-    if (percentage >= 50) return 'C-';
-    if (percentage >= 40) return 'D';
-    return 'E';
-  }
-
-  function toggleSubject(subject: string) {
-    expandedSubjects[subject] = !expandedSubjects[subject];
-  }
-
-  // Helper function to group by subject
-  function groupBySubject(data: AnalyticsData | null): Record<string, Assessment[]> {
-    const grouped: Record<string, Assessment[]> = {};
-    if (!data) return grouped;
-    for (const a of data) {
-      if (!grouped[a.subject]) grouped[a.subject] = [];
-      grouped[a.subject].push(a);
-    }
-    return grouped;
-  }
 
   function openDeleteModal() {
     showDeleteModal = true;
@@ -328,9 +208,20 @@
     }
   }
 
-  function getFilteredAssessments(data: AnalyticsData | null): Assessment[] {
-    if (!data) return [];
-    return data.filter((a) => {
+
+
+  function handleFilterChange(filters: any) {
+    filterSubject = filters.subject;
+    filterStatus = filters.status;
+    filterMinGrade = filters.minGrade;
+    filterMaxGrade = filters.maxGrade;
+    filterSearch = filters.search;
+  }
+
+  // Derived filtered data
+  const filteredData = $derived(() => {
+    if (!analyticsData) return [];
+    return analyticsData.filter((a) => {
       if (filterSubject && a.subject !== filterSubject) return false;
       if (filterStatus && a.status !== filterStatus) return false;
       if (filterMinGrade !== null && (a.finalGrade ?? -1) < filterMinGrade) return false;
@@ -345,7 +236,9 @@
         return false;
       return true;
     });
-  }
+  });
+
+
 
   function hasActiveFilters() {
     return !!(
@@ -408,59 +301,11 @@
     return averages;
   }
 
-  $: monthlyAverages =
-    analyticsData && analyticsData.length > 0 ? calculateMonthlyAverages(analyticsData) : {};
-  $: monthlyPoints = (() => {
-    const monthMap: Record<string, number> = {
-      January: 0,
-      February: 1,
-      March: 2,
-      April: 3,
-      May: 4,
-      June: 5,
-      July: 6,
-      August: 7,
-      September: 8,
-      October: 9,
-      November: 10,
-      December: 11,
-    };
-    const monthsSorted = Object.keys(monthlyAverages).sort((a, b) => {
-      const [monthA, yearA] = a.split(' ');
-      const [monthB, yearB] = b.split(' ');
-      const dateA = new Date(Number(yearA), monthMap[monthA], 1);
-      const dateB = new Date(Number(yearB), monthMap[monthB], 1);
-      return dateA.getTime() - dateB.getTime();
-    });
-    return monthsSorted.map((month, i, array) => {
-      const avg = monthlyAverages[month];
-      const x =
-        graphPadding + (i / Math.max(array.length - 1, 1)) * (graphWidth - 2 * graphPadding);
-      const y = graphHeight - graphPadding - (avg / 100) * (graphHeight - 2 * graphPadding);
-      return { month, avg, x, y };
-    });
-  })();
-  $: showMonthEvery = Math.ceil(monthlyPoints.length / 10);
 
-  function showTooltip(
-    event: MouseEvent,
-    point: { x: number; y: number; month: string; avg: number },
-  ) {
-    const svgRect = (event.target as SVGCircleElement).ownerSVGElement?.getBoundingClientRect();
-    if (svgRect) {
-      tooltip = {
-        show: true,
-        x: event.clientX - svgRect.left,
-        y: event.clientY - svgRect.top - 10,
-        month: point.month,
-        avg: point.avg,
-      };
-    }
-  }
 
-  function hideTooltip() {
-    tooltip.show = false;
-  }
+
+
+
 </script>
 
 <div class="container px-6 py-7 mx-auto">
@@ -497,7 +342,7 @@
         </p>
         <button
           class="px-6 py-3 mt-2 text-lg font-semibold text-white bg-indigo-600 rounded-lg shadow transition-all duration-200 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 accent-ring hover:bg-indigo-700"
-          on:click={grabData}>
+          onclick={grabData}>
           Grab Data
         </button>
         {#if error}
@@ -510,129 +355,36 @@
     </div>
   {:else if analyticsData}
     <div class="flex justify-end mb-4">
-      <button
-        class="px-4 py-2 text-white bg-red-600 rounded transition-all duration-200 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 accent-ring hover:bg-red-700"
-        on:click={openDeleteModal}>
+      <Button variant="danger" onclick={openDeleteModal}>
         Delete Data
-      </button>
-    </div>
-    <div
-      class="flex flex-col gap-8 p-8 mb-8 rounded-2xl border shadow-xl border-slate-200 bg-white/80 dark:bg-slate-900/80 dark:border-slate-700 lg:flex-row"
-      in:fade={{ duration: 400 }}>
-      <GradeDistribution data={analyticsData || []} />
-      <div class="flex-1 min-w-[400px] max-w-[800px] flex flex-col">
-        <h3 class="mb-2 text-lg font-semibold">Average Grade by Month</h3>
-        <div class="flex justify-center items-center h-full">
-          {#if analyticsData && analyticsData.length > 0}
-            <div class="flex justify-center line-graph-container" style="position:relative;">
-              <svg
-                width={1000}
-                height={300}
-                viewBox="0 0 1000 300"
-                xmlns="http://www.w3.org/2000/svg">
-                <!-- Y-axis -->
-                <line
-                  x1={graphPadding}
-                  y1={graphPadding}
-                  x2={graphPadding}
-                  y2={300 - graphPadding}
-                  stroke="#fff"
-                  stroke-width="2" />
-                <!-- X-axis -->
-                <line
-                  x1={graphPadding}
-                  y1={300 - graphPadding}
-                  x2={1000 - graphPadding}
-                  y2={300 - graphPadding}
-                  stroke="#fff"
-                  stroke-width="2" />
-                <!-- Y-axis ticks and labels -->
-                {#each yTicks as tick}
-                  <line
-                    x1={graphPadding - 5}
-                    y1={300 - graphPadding - (tick / 100) * (300 - 2 * graphPadding)}
-                    x2={graphPadding}
-                    y2={300 - graphPadding - (tick / 100) * (300 - 2 * graphPadding)}
-                    stroke="#fff"
-                    stroke-width="2" />
-                  <text
-                    x={graphPadding - 10}
-                    y={300 - graphPadding - (tick / 100) * (300 - 2 * graphPadding) + 4}
-                    text-anchor="end"
-                    font-size="14"
-                    fill="#fff">{tick}</text>
-                {/each}
-                <!-- X-axis month labels -->
-                {#each monthlyPoints as point, i}
-                  {#if i % showMonthEvery === 0 || i === monthlyPoints.length - 1}
-                    <text
-                      x={graphPadding +
-                        (i / Math.max(monthlyPoints.length - 1, 1)) * (1000 - 2 * graphPadding)}
-                      y={300 - graphPadding + 24}
-                      text-anchor="middle"
-                      font-size="14"
-                      fill="#fff"
-                      transform={`rotate(-35,${graphPadding + (i / Math.max(monthlyPoints.length - 1, 1)) * (1000 - 2 * graphPadding)},${300 - graphPadding + 24})`}
-                      >{point.month}</text>
-                  {/if}
-                {/each}
-                <!-- Line path -->
-                {#if monthlyPoints.length > 1}
-                  <polyline
-                    fill="none"
-                    stroke="var(--accent-color-value)"
-                    stroke-width="2.5"
-                    points={monthlyPoints
-                      .map(
-                        (p, i) =>
-                          `${graphPadding + (i / Math.max(monthlyPoints.length - 1, 1)) * (1000 - 2 * graphPadding)},${300 - graphPadding - (p.avg / 100) * (300 - 2 * graphPadding)}`,
-                      )
-                      .join(' ')} />
-                {/if}
-                <!-- Points -->
-                {#each monthlyPoints as point, i}
-                  <circle
-                    cx={graphPadding +
-                      (i / Math.max(monthlyPoints.length - 1, 1)) * (1000 - 2 * graphPadding)}
-                    cy={300 - graphPadding - (point.avg / 100) * (300 - 2 * graphPadding)}
-                    r="5"
-                    fill="var(--accent-color-value)"
-                    class="transition-all duration-200 hover:fill-accent-300"
-                    on:mouseover={(e) =>
-                      showTooltip(e, {
-                        ...point,
-                        x:
-                          graphPadding +
-                          (i / Math.max(monthlyPoints.length - 1, 1)) * (1000 - 2 * graphPadding),
-                        y: 300 - graphPadding - (point.avg / 100) * (300 - 2 * graphPadding),
-                      })}
-                    on:mouseout={hideTooltip}
-                    style="cursor:pointer" />
-                {/each}
-              </svg>
-              <!-- Tooltip overlay is rendered here -->
-              {#if tooltip.show}
-                <div
-                  style="position:absolute; left:0; top:0; pointer-events:none; z-index:10; width:1000px; height:300px;">
-                  <div
-                    style="position:absolute; left:{tooltip.x}px; top:{tooltip.y}px; background:rgba(30,41,59,0.95); color:white; padding:8px 12px; border-radius:8px; font-size:16px; box-shadow:0 2px 8px rgba(0,0,0,0.2); white-space:nowrap; transform:translate(-50%,-100%);">
-                    <div><strong>{tooltip.month}</strong></div>
-                    <div>Avg: {tooltip.avg.toFixed(1)}%</div>
-                  </div>
-                </div>
-              {/if}
-            </div>
-          {:else}
-            <p class="text-slate-500 dark:text-slate-400">No data available</p>
-          {/if}
-        </div>
-      </div>
+      </Button>
     </div>
 
+    <!-- Main Analytics Charts -->
+    <div
+      class="flex flex-col gap-8 p-8 mb-8 rounded-2xl border shadow-xl border-slate-200 bg-white/80 dark:bg-slate-900/80 dark:border-slate-700 xl:flex-row"
+      in:fade={{ duration: 400 }}>
+      <GradeDistribution data={analyticsData || []} />
+      <AnalyticsChart data={analyticsData || []} />
+    </div>
+
+    <!-- Filters -->
+    <AssessmentFilters
+      data={analyticsData || []}
+      bind:filterSubject
+      bind:filterStatus
+      bind:filterMinGrade
+      bind:filterMaxGrade
+      bind:filterSearch
+      onFilter={handleFilterChange}
+    />
+
+
+    <!-- Raw Data Table -->
     <div
       class="p-8 rounded-2xl border shadow-xl border-slate-200 bg-white/80 dark:bg-slate-900/80 dark:border-slate-700"
-      in:fade={{ duration: 400, delay: 100 }}>
-      <RawDataTable data={analyticsData || []} />
+      in:fade={{ duration: 400, delay: 200 }}>
+      <RawDataTable data={filteredData()} />
     </div>
   {:else}
     <div class="text-center text-slate-500 dark:text-slate-400">No analytics data available</div>
@@ -656,11 +408,11 @@
       <div class="flex gap-3 justify-end">
         <button
           class="px-4 py-2 rounded-lg transition-all duration-200 transform text-slate-800 bg-slate-200 dark:bg-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 accent-ring"
-          on:click={closeDeleteModal}
+          onclick={closeDeleteModal}
           disabled={deleteLoading}>Cancel</button>
         <button
           class="px-4 py-2 text-white bg-red-600 rounded-lg transition-all duration-200 transform hover:bg-red-700 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 accent-ring"
-          on:click={confirmDeleteAnalytics}
+          onclick={confirmDeleteAnalytics}
           disabled={deleteLoading}>
           {#if deleteLoading}
             <span
@@ -674,12 +426,4 @@
   </Modal>
 </div>
 
-<style>
-  /* Ensure the tooltip overlay is positioned relative to the graph container */
-  .line-graph-container {
-    position: relative;
-    width: 100%;
-    max-width: 800px;
-    margin: 0 auto;
-  }
-</style>
+

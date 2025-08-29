@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Badge } from '$lib/components/ui';
+
   interface Assessment {
     id: number;
     title: string;
@@ -21,20 +23,23 @@
     const now = new Date();
 
     if (status === 'MARKS_RELEASED') {
-      return { text: 'Marked', color: 'bg-green-500' };
+      return { text: 'Marked', variant: 'success' as const };
     } else if (dueDate < now) {
-      return { text: 'Overdue', color: 'bg-red-500' };
+      return { text: 'Overdue', variant: 'danger' as const };
     } else if (dueDate.getTime() - now.getTime() < 7 * 24 * 60 * 60 * 1000) {
       // Within 7 days
-      return { text: 'Due Soon', color: 'bg-yellow-500' };
+      return { text: 'Due Soon', variant: 'warning' as const };
     } else {
-      return { text: 'Upcoming', color: 'bg-blue-500' };
+      return { text: 'Upcoming', variant: 'info' as const };
     }
   }
+
+  const isMarked = $derived(assessment.status === 'MARKS_RELEASED');
+  const detailsTab = $derived(isMarked ? 'details' : 'overview');
 </script>
 
 <a
-  href="/assessments/{assessment.id}/{assessment.metaclass}"
+  href="/assessments/{assessment.id}/{assessment.metaclass}?tab={detailsTab}#top"
   class="block bg-white/80 dark:bg-slate-900/50 backdrop-blur-sm rounded-xl p-4 shadow-lg border-l-8 border border-slate-300/50 dark:border-slate-700/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(99,102,241,0.2)]"
   style="border-color: {assessment.colour};">
   <div class="flex gap-2 items-center">
@@ -46,13 +51,12 @@
         year: 'numeric',
       })}
     </div>
-    <span
-      class="px-2 py-0.5 rounded text-xs text-white {getStatusBadge(
-        assessment.status,
-        assessment.due,
-      ).color}">
+    <Badge 
+      variant={getStatusBadge(assessment.status, assessment.due).variant}
+      size="xs"
+    >
       {getStatusBadge(assessment.status, assessment.due).text}
-    </span>
+    </Badge>
   </div>
   <h4 class="mt-1 font-bold truncate text-slate-900 dark:text-white">
     {assessment.title}

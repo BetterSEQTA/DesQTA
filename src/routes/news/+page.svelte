@@ -3,6 +3,7 @@
   import { fade } from 'svelte/transition';
   import { cache } from '../../utils/cache';
   import { getRSS } from '../../utils/netUtil';
+  import { invoke } from '@tauri-apps/api/core';
 
   interface NewsArticle {
     title: string;
@@ -56,13 +57,9 @@
     netherlands: ['https://www.dutchnews.nl/feed/', 'https://www.nrc.nl/rss/'],
   };
 
-  const fetchAustraliaNews = async (url: string) => {
+  const fetchAustraliaNews = async (from: string, domains: string) => {
     try {
-      const result = await fetch(url);
-      const response = await result.json();
-      if (response.code === 'rateLimited') {
-        return fetchAustraliaNews(url + '%00');
-      }
+      const response = await invoke<any>('get_news_australia', { from, domains });
       return response;
     } catch (error) {
       console.error('Error fetching Australian news:', error);
@@ -83,9 +80,8 @@
       if (source === 'australia') {
         const date = new Date();
         const from = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate() - 5}`;
-        const url = `https://newsapi.org/v2/everything?domains=abc.net.au&from=${from}&apiKey=17c0da766ba347c89d094449504e3080`;
-        const response = await fetchAustraliaNews(url);
-        news = response.articles || [];
+        const response = await fetchAustraliaNews(from, 'abc.net.au');
+        news = (response && response.articles) ? response.articles : [];
       } else {
         let feeds: string[];
 
@@ -251,6 +247,7 @@
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
@@ -258,6 +255,7 @@
   .line-clamp-3 {
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }

@@ -1,0 +1,112 @@
+/* Neon Cyber Theme - Dark Mode Styles (Default) */
+
+.dark {
+  --background-color: #0a0a0f;
+  --surface-color: #1a1a2e;
+  --card-color: #16213e;
+  --text-color: #00ff41;
+  --text-secondary: #9ca3af;
+  --border-color: #00ff41;
+}
+
+.dark body {
+  background: var(--background-color) !important;
+  color: var(--text-color) !important;
+}
+
+.dark .cyber-card {
+  background: linear-gradient(135deg, var(--surface-color) 0%, var(--card-color) 100%);
+  border-color: var(--primary-neon);
+  color: var(--text-color);
+}
+
+.dark .cyber-header {
+  background: linear-gradient(135deg, var(--background-color) 0%, var(--surface-color) 100%);
+  border-bottom-color: var(--primary-neon);
+}
+
+.dark .cyber-sidebar {
+  background: linear-gradient(180deg, var(--background-color) 0%, var(--surface-color) 100%);
+  border-right-color: var(--primary-neon);
+}
+
+.dark .cyber-nav-item {
+  color: var(--text-secondary);
+}
+
+.dark .cyber-nav-item:hover {
+  color: var(--primary-neon);
+  background: rgba(0, 255, 65, 0.1);
+}
+
+.dark .cyber-nav-item.active {
+  color: var(--primary-neon);
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.2), transparent);
+}
+
+.dark .cyber-input {
+  background: var(--background-color);
+  border-color: var(--primary-neon);
+  color: var(--primary-neon);
+}
+
+.dark .cyber-input::placeholder {
+  color: rgba(0, 255, 65, 0.5);
+}
+
+.dark .cyber-modal {
+  background: linear-gradient(135deg, var(--background-color) 0%, var(--surface-color) 100%);
+  border-color: var(--primary-neon);
+  color: var(--text-color);
+}
+
+.dark .cyber-terminal {
+  background: var(--background-color);
+  color: var(--primary-neon);
+  border-color: var(--primary-neon);
+}
+
+/* Enhanced dark mode effects */
+.dark .cyber-button {
+  border-color: var(--primary-neon);
+  color: var(--primary-neon);
+  background: linear-gradient(135deg, transparent 0%, rgba(0, 255, 65, 0.1) 30%, transparent 100%);
+}
+
+.dark .cyber-button:hover {
+  background: var(--primary-neon);
+  color: var(--background-color);
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar {
+  background: var(--background-color);
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: var(--surface-color);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--primary-neon), var(--secondary-neon));
+}
+
+/* Ensure all text is visible in dark mode */
+.dark, .dark * {
+  color: var(--text-color) !important;
+}
+
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+  color: var(--primary-neon) !important;
+}
+
+.dark .cyber-title {
+  background: linear-gradient(135deg, var(--primary-neon), var(--secondary-neon), var(--tertiary-neon));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dark .cyber-subtitle {
+  color: var(--text-secondary) !important;
+}

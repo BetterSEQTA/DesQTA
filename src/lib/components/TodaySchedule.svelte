@@ -11,11 +11,13 @@
     DocumentText,
     BookOpen,
     BuildingOffice,
+    CalendarDays,
   } from 'svelte-hero-icons';
+  import { Button } from '$lib/components/ui';
 
   const studentId = 69; //! literally changes nothing but was used in the original seqta code.
 
-  let currentSelectedDate: Date = new Date();
+  let currentSelectedDate: Date = $state(new Date());
 
   let lessons = $state<any[]>([]);
   let lessonColours = $state<any[]>([]);
@@ -102,6 +104,19 @@
     loadLessons();
   }
 
+  function onDateChange(event: Event) {
+    const target = event.target as HTMLInputElement;
+    if (target.value) {
+      currentSelectedDate = new Date(target.value);
+      loadLessons();
+    }
+  }
+
+  function goToToday() {
+    currentSelectedDate = new Date();
+    loadLessons();
+  }
+
   function lessonsSubtitle() {
     const today = new Date();
     const diff = ~~((today.getTime() - currentSelectedDate.getTime()) / 86_400_000);
@@ -130,17 +145,45 @@
   <div
     class="flex flex-col gap-4 justify-between items-start px-3 py-3 bg-gradient-to-r border-b sm:flex-row sm:items-center sm:px-4 border-slate-300/50 dark:border-slate-700/50 from-slate-100/70 dark:from-slate-800/70 to-slate-100/30 dark:to-slate-800/30">
     <span class="text-xl font-semibold text-slate-900 dark:text-white">{lessonsSubtitle()}</span>
-    <div class="flex gap-3">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center w-full sm:w-auto">
+      <!-- Date Picker -->
+      <div class="relative w-full sm:w-auto">
+        <input
+          type="date"
+          value={formatDate(currentSelectedDate)}
+          onchange={onDateChange}
+          class="w-full sm:w-auto px-3 py-1.5 text-sm rounded-lg border transition-all duration-200 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-white border-slate-300/50 dark:border-slate-700/50 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 hover:border-accent-400 dark:hover:border-accent-400"
+          title="Select a date"
+        />
+        <Icon 
+          src={CalendarDays} 
+          class="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" 
+        />
+      </div>
+      
+      <!-- Today Button -->
       <button
-        onclick={prevDay}
-        class="flex justify-center items-center w-9 h-9 rounded-full border transition-all duration-300 text-slate-600 hover:accent-bg-hover dark:text-slate-400 hover:text-white border-slate-300/50 dark:border-slate-700/50 hover:accent-border hover:accent-shadow">
-        <Icon src={ChevronLeft} class="w-5 h-5" />
+        onclick={goToToday}
+        class="w-full sm:w-auto px-3 py-1.5 text-sm font-medium rounded-lg border transition-all duration-200 text-slate-700 dark:text-slate-300 bg-slate-200/70 dark:bg-slate-800/70 hover:accent-bg-hover hover:text-white border-slate-300/50 dark:border-slate-700/50 hover:accent-border"
+        title="Go to today">
+        Today
       </button>
-      <button
-        onclick={nextDay}
-        class="flex justify-center items-center w-9 h-9 rounded-full border transition-all duration-300 text-slate-600 hover:accent-bg-hover dark:text-slate-400 hover:text-white border-slate-300/50 dark:border-slate-700/50 hover:accent-border hover:accent-shadow">
-        <Icon src={ChevronRight} class="w-5 h-5" />
-      </button>
+      
+      <!-- Navigation Buttons -->
+      <div class="flex gap-1 justify-center sm:justify-start">
+        <button
+          onclick={prevDay}
+          class="flex justify-center items-center w-8 h-8 rounded-lg border transition-all duration-300 text-slate-600 hover:accent-bg-hover dark:text-slate-400 hover:text-white border-slate-300/50 dark:border-slate-700/50 hover:accent-border hover:accent-shadow"
+          title="Previous day">
+          <Icon src={ChevronLeft} class="w-4 h-4" />
+        </button>
+        <button
+          onclick={nextDay}
+          class="flex justify-center items-center w-8 h-8 rounded-lg border transition-all duration-300 text-slate-600 hover:accent-bg-hover dark:text-slate-400 hover:text-white border-slate-300/50 dark:border-slate-700/50 hover:accent-border hover:accent-shadow"
+          title="Next day">
+          <Icon src={ChevronRight} class="w-4 h-4" />
+        </button>
+      </div>
     </div>
   </div>
 
@@ -211,20 +254,24 @@
 
             {#if lesson.programmeID !== 0}
               <div class="flex gap-3">
-                <button
-                  class="flex justify-center items-center w-9 h-9 rounded-lg border transition-all duration-300 text-slate-700 bg-slate-200/70 dark:bg-slate-800/70 hover:accent-bg-hover dark:text-slate-300 hover:text-white border-slate-300/50 dark:border-slate-700/50 hover:accent-border"
-                  aria-label="View Assessment"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={DocumentText}
+                  ariaLabel="View Assessment"
                   onclick={() =>
-                    (location.href = `/assessments?code=${lesson.code}&date=${lesson.date}`)}>
-                  <Icon src={DocumentText} class="w-5 h-5" />
-                </button>
-                <button
-                  class="flex justify-center items-center w-9 h-9 rounded-lg border transition-all duration-300 text-slate-700 bg-slate-200/70 dark:bg-slate-800/70 hover:accent-bg-hover dark:text-slate-300 hover:text-white border-slate-300/50 dark:border-slate-700/50 hover:accent-border"
-                  aria-label="View Course"
+                    (location.href = `/assessments?code=${lesson.code}&date=${lesson.date}`)}
+                  class="w-9 h-9 p-0 bg-slate-200/70 dark:bg-slate-800/70 hover:bg-accent-500 hover:text-white border border-slate-300/50 dark:border-slate-700/50"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={BookOpen}
+                  ariaLabel="View Course"
                   onclick={() =>
-                    (location.href = `/courses?code=${lesson.code}&date=${lesson.date}`)}>
-                  <Icon src={BookOpen} class="w-5 h-5" />
-                </button>
+                    (location.href = `/courses?code=${lesson.code}&date=${lesson.date}`)}
+                  class="w-9 h-9 p-0 bg-slate-200/70 dark:bg-slate-800/70 hover:bg-accent-500 hover:text-white border border-slate-300/50 dark:border-slate-700/50"
+                />
               </div>
             {/if}
           </div>

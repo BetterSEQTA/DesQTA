@@ -37,8 +37,8 @@ const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/
 export class GeminiService {
   static async getApiKey(): Promise<string | null> {
     try {
-      const settings = await invoke<any>('get_settings');
-      return settings.gemini_api_key || null;
+    const subset = await invoke<any>('get_settings_subset', { keys: ['gemini_api_key'] });
+    return subset?.gemini_api_key || null;
     } catch {
       return null;
     }

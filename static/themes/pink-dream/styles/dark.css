@@ -1,0 +1,76 @@
+/* Pink Girly Pop Theme - Dark Mode Styles */
+
+.dark {
+  --background-color: linear-gradient(135deg, #2d1a26 0%, #4a2545 50%, #5d3553 100%);
+  --surface-color: rgba(255, 105, 180, 0.15);
+  --text-color: #ffeef8;
+  --border-color: #ff69b4;
+}
+
+.dark body {
+  background: var(--background-color) !important;
+  color: var(--text-color) !important;
+}
+
+.dark .girly-card {
+  background: linear-gradient(135deg, rgba(255, 105, 180, 0.1) 0%, rgba(255, 182, 193, 0.15) 100%);
+  border-color: rgba(255, 105, 180, 0.4);
+  color: #ffeef8;
+}
+
+.dark .girly-header {
+  background: linear-gradient(135deg, rgba(255, 105, 180, 0.2) 0%, rgba(139, 72, 116, 0.8) 100%);
+  border-bottom-color: rgba(255, 105, 180, 0.4);
+}
+
+.dark .girly-sidebar {
+  background: linear-gradient(180deg, rgba(139, 72, 116, 0.3) 0%, rgba(255, 105, 180, 0.1) 100%);
+  border-right-color: rgba(255, 105, 180, 0.4);
+}
+
+.dark .girly-nav-item {
+  color: #ffeef8;
+}
+
+.dark .girly-nav-item:hover {
+  background: linear-gradient(135deg, rgba(255, 105, 180, 0.3) 0%, rgba(255, 182, 193, 0.2) 100%);
+}
+
+.dark .girly-input {
+  background: rgba(45, 26, 38, 0.8);
+  border-color: rgba(255, 105, 180, 0.4);
+  color: #ffeef8;
+}
+
+.dark .girly-input::placeholder {
+  color: rgba(255, 238, 248, 0.5);
+}
+
+.dark .girly-modal {
+  background: linear-gradient(135deg, rgba(45, 26, 38, 0.95) 0%, rgba(139, 72, 116, 0.9) 100%);
+  border-color: rgba(255, 105, 180, 0.4);
+  color: #ffeef8;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar {
+  background: rgba(45, 26, 38, 0.5);
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: rgba(45, 26, 38, 0.3);
+}
+
+/* Ensure text visibility in dark mode */
+.dark, .dark * {
+  color: #ffeef8 !important;
+}
+
+.dark .girly-title {
+  text-shadow: 0 0 20px rgba(255, 105, 180, 0.8);
+}
+
+.dark .girly-subtitle {
+  color: #ffeef8 !important;
+  text-shadow: 0 1px 3px rgba(255, 105, 180, 0.4);
+}

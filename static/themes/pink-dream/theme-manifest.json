@@ -1,0 +1,51 @@
+{
+  "name": "Pink Dream",
+  "version": "1.0.0",
+  "description": "A fun and vibrant pink theme with cute gradients, playful animations, and girly pop aesthetics. Perfect for those who love all things pink and sparkly!",
+  "author": "DesQTA Team",
+  "license": "MIT",
+  "compatibility": {
+    "minVersion": "1.0.0",
+    "maxVersion": "2.0.0"
+  },
+  "preview": {
+    "thumbnail": "/themes/pink-dream/preview.png",
+    "screenshots": ["/themes/pink-dream/screenshot1.png"]
+  },
+  "settings": {
+    "defaultAccentColor": "#ff69b4",
+    "defaultTheme": "light",
+    "supportsLightMode": true,
+    "supportsDarkMode": true,
+    "supportsSystemMode": true
+  },
+  "customProperties": {
+    "primaryColor": "#ff69b4",
+    "secondaryColor": "#ffb6c1",
+    "successColor": "#ff1493",
+    "warningColor": "#ffa07a",
+    "errorColor": "#ff6347",
+    "backgroundColor": "linear-gradient(135deg, #ffeef8 0%, #ffd1dc 50%, #ffb6c1 100%)",
+    "surfaceColor": "rgba(255, 182, 193, 0.3)",
+    "textColor": "#8b4874",
+    "borderColor": "#ff69b4",
+    "shadowColor": "rgba(255, 105, 180, 0.3)"
+  },
+  "fonts": {
+    "primary": "'Nunito', 'Comic Sans MS', cursive",
+    "secondary": "'Quicksand', 'Arial Rounded MT Bold', sans-serif",
+    "monospace": "'Fira Code', 'Courier New', monospace",
+    "display": "'Dancing Script', 'Quicksand', cursive"
+  },
+  "animations": {
+    "duration": "300ms",
+    "easing": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+    "enableEnhanced": true
+  },
+  "features": {
+    "customScrollbars": true,
+    "glassmorphism": true,
+    "gradients": true,
+    "shadows": true
+  }
+}
