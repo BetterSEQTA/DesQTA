@@ -676,41 +676,38 @@ The Company reserves the right to terminate your access to the Service at any ti
                     class="text-sm font-medium cursor-pointer text-zinc-800 sm:text-base dark:text-zinc-200"
                     >Only use Fallback Location for Weather</label>
                 </div>
+                <!-- ALWAYS show this even if forceUseLocation is false -->
+                <div class="flex flex-col gap-2 items-start pl-1">
+                  <label
+                    for="weather-city"
+                    class="text-xs text-zinc-600 sm:text-sm dark:text-zinc-400"
+                    >Fallback City:</label>
+                  <input
+                    id="weather-city"
+                    class="px-3 py-2 w-full bg-white rounded-sm border transition text-zinc-900 sm:w-64 dark:bg-zinc-900/50 dark:text-white border-zinc-300/50 dark:border-zinc-700/50 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                    placeholder="Perth"
+                    bind:value={weatherCity} />
+                </div>
 
-                <!-- Show fallback inputs ONLY if forceUseLocation is true -->
-                {#if forceUseLocation}
-                  <div class="flex flex-col gap-2 items-start pl-1">
-                    <label
-                      for="weather-city"
-                      class="text-xs text-zinc-600 sm:text-sm dark:text-zinc-400"
-                      >Fallback City:</label>
-                    <input
-                      id="weather-city"
-                      class="px-3 py-2 w-full bg-white rounded-sm border transition text-zinc-900 sm:w-64 dark:bg-zinc-900/50 dark:text-white border-zinc-300/50 dark:border-zinc-700/50 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                      placeholder="Perth"
-                      bind:value={weatherCity} />
-                  </div>
-
-                  <div class="flex flex-col gap-2 items-start pl-1">
-                    <label
-                      for="weather-country"
-                      class="text-xs text-zinc-600 sm:text-sm dark:text-zinc-400"
-                      >Fallback Country Code</label>
-                    <span class="text-xs">
-                      Visit <a
-                        href="https://countrycode.org"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="text-blue-400 hover:underline">countrycode.org</a> to find your country
-                      code.
-                    </span>
-                    <input
-                      id="weather-country"
-                      class="px-3 py-2 w-full bg-white rounded-sm border transition text-zinc-900 sm:w-64 dark:bg-zinc-900/50 dark:text-white border-zinc-300/50 dark:border-zinc-700/50 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                      placeholder="AU"
-                      bind:value={weatherCountry} />
-                  </div>
-                {/if}
+                <div class="flex flex-col gap-2 items-start pl-1">
+                  <label
+                    for="weather-country"
+                    class="text-xs text-zinc-600 sm:text-sm dark:text-zinc-400"
+                    >Fallback Country Code</label>
+                  <span class="text-xs">
+                    Visit <a
+                      href="https://countrycode.org"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-blue-400 hover:underline">countrycode.org</a> to find your country
+                    code.
+                  </span>
+                  <input
+                    id="weather-country"
+                    class="px-3 py-2 w-full bg-white rounded-sm border transition text-zinc-900 sm:w-64 dark:bg-zinc-900/50 dark:text-white border-zinc-300/50 dark:border-zinc-700/50 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                    placeholder="AU"
+                    bind:value={weatherCountry} />
+                </div>
               {/if}
             </div>
           </div>
