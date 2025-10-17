@@ -2,20 +2,12 @@
   import { onMount } from 'svelte';
   import { seqtaFetch } from '../../utils/netUtil';
   import { cache } from '../../utils/cache';
-  import { saveAs } from 'file-saver';
   import { getWithIdbFallback, setIdb } from '$lib/services/idbCache';
-  import jsPDF from 'jspdf';
-  import autoTable from 'jspdf-autotable';
-  import * as pdfjsLib from 'pdfjs-dist';
   import TimetableHeader from '$lib/components/TimetableHeader.svelte';
   import TimetableGrid from '$lib/components/TimetableGrid.svelte';
   import TimetablePdfViewer from '$lib/components/TimetablePdfViewer.svelte';
-  import { createEvents, type EventStatus } from 'ics';
   import T from '$lib/components/T.svelte';
   import { _ } from '../../lib/i18n';
-
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
   const studentId = 69;
 
@@ -178,7 +170,8 @@
 
   const timeBounds = $derived(getTimeBounds);
 
-  function exportTimetableCSV() {
+  async function exportTimetableCSV() {
+    const { saveAs } = await import('file-saver');
     const header = [
       $_('timetable.day') || 'Day',
       $_('timetable.subject') || 'Subject', 
@@ -212,6 +205,10 @@
     pdfLoading = true;
     
     try {
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable')
+    ]);
     const doc = new jsPDF();
     const header = [
       $_('timetable.day') || 'Day',
@@ -270,8 +267,14 @@
     }
   }
 
-  function exportTimetableIcal() {
+  async function exportTimetableIcal() {
     if (!lessons.length) return;
+    
+    const [{ createEvents }, { saveAs }] = await Promise.all([
+      import('ics'),
+      import('file-saver')
+    ]);
+    
     const events = lessons.map((l) => {
       // Parse start and end times
       const [startHour, startMinute] = l.from.split(':').map(Number);

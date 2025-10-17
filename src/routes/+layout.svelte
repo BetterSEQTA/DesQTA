@@ -3,15 +3,12 @@
   import { invoke } from '@tauri-apps/api/core';
   import { Window } from "@tauri-apps/api/window";
   const appWindow = Window.getCurrent();
-  import AboutModal from '../lib/components/AboutModal.svelte';
   import AppHeader from '../lib/components/AppHeader.svelte';
   import AppSidebar from '../lib/components/AppSidebar.svelte';
   import LoginScreen from '../lib/components/LoginScreen.svelte';
   import LoadingScreen from '../lib/components/LoadingScreen.svelte';
-  import ThemeBuilder from '../lib/components/ThemeBuilder.svelte';
+  import Skeleton from '../lib/components/Skeleton.svelte';
   import { authService, type UserInfo } from '../lib/services/authService';
-  import { weatherService, type WeatherData } from '../lib/services/weatherService';
-  import { warmUpCommonData } from '../lib/services/warmupService';
   import { logger } from '../utils/logger';
   import { seqtaFetch } from '../utils/netUtil';
   import '../app.css';
@@ -23,7 +20,35 @@
   import { writable } from 'svelte/store';
   import { page } from '$app/stores';
   import { onMount, onDestroy } from 'svelte';
+  import type { WeatherData } from '../lib/services/weatherService';
   export const needsSetup = writable(false);
+
+  type AboutModalComponent = typeof import('../lib/components/AboutModal.svelte').default;
+  type ThemeBuilderComponent = typeof import('../lib/components/ThemeBuilder.svelte').default;
+  type WeatherServiceModule = typeof import('../lib/services/weatherService');
+  type WarmupServiceModule = typeof import('../lib/services/warmupService');
+
+  let aboutModalComponent = $state<AboutModalComponent | null>(null);
+  let aboutModalLoading = $state(false);
+  let themeBuilderComponent = $state<ThemeBuilderComponent | null>(null);
+  let themeBuilderLoading = $state(false);
+
+  let weatherServiceModule: WeatherServiceModule | null = null;
+  let warmupServiceModule: WarmupServiceModule | null = null;
+
+  const ensureWeatherService = async () => {
+    if (!weatherServiceModule) {
+      weatherServiceModule = await import('../lib/services/weatherService');
+    }
+    return weatherServiceModule.weatherService;
+  };
+
+  const ensureWarmupService = async () => {
+    if (!warmupServiceModule) {
+      warmupServiceModule = await import('../lib/services/warmupService');
+    }
+    return warmupServiceModule;
+  };
 
   let { children } = $props();
 
@@ -74,7 +99,16 @@
   let menuLoading = $state(true);
   let devMockEnabled = false;
 
-onMount(() => {
+onMount(async () => {
+  // Lazy-load heavy services (non-blocking)
+  Promise.all([
+    import('../lib/services/weatherService'),
+    import('../lib/services/warmupService')
+  ]).then(([ws, wus]) => {
+    weatherServiceModule = ws;
+    warmupServiceModule = wus;
+  });
+
   // Platform detection - similar to LoginScreen
   const checkPlatform = () => {
     const tauri_platform = import.meta.env.TAURI_ENV_PLATFORM;
@@ -99,6 +133,38 @@ onMount(() => {
     updateCorners();
     appWindow.onResized(updateCorners);
     appWindow.onMoved(updateCorners);
+  }
+});
+
+$effect(() => {
+  if (showAboutModal && !aboutModalComponent && !aboutModalLoading) {
+    aboutModalLoading = true;
+    import('../lib/components/AboutModal.svelte')
+      .then((module) => {
+        aboutModalComponent = module.default;
+      })
+      .catch((error) => {
+        logger.error('layout', 'loadAboutModal', 'Failed to load AboutModal', { error });
+      })
+      .finally(() => {
+        aboutModalLoading = false;
+      });
+  }
+});
+
+$effect(() => {
+  if ($themeBuilderSidebarOpen && !themeBuilderComponent && !themeBuilderLoading) {
+    themeBuilderLoading = true;
+    import('../lib/components/ThemeBuilder.svelte')
+      .then((module) => {
+        themeBuilderComponent = module.default;
+      })
+      .catch((error) => {
+        logger.error('layout', 'loadThemeBuilder', 'Failed to load ThemeBuilder', { error });
+      })
+      .finally(() => {
+        themeBuilderLoading = false;
+      });
   }
 });
 
@@ -292,6 +358,7 @@ onMount(() => {
   };
 
   const loadWeatherSettings = async () => {
+    const weatherService = await ensureWeatherService();
     const settings = await weatherService.loadWeatherSettings();
     weatherEnabled = settings.weather_enabled;
     weatherCity = settings.weather_city;
@@ -304,6 +371,8 @@ onMount(() => {
       weatherData = null;
       return;
     }
+
+    const weatherService = await ensureWeatherService();
 
     loadingWeather = true;
     weatherError = '';
@@ -379,8 +448,10 @@ onMount(() => {
         reloadSidebarSettings()
       ]);
       
-      // Background tasks
-      warmUpCommonData().catch(() => {});
+      // Background tasks (lazy-loaded)
+      ensureWarmupService().then((warmupModule) => {
+        warmupModule.warmUpCommonData().catch(() => {});
+      });
       if (weatherEnabled) {
         fetchWeather(!forceUseLocation);
       }
@@ -597,20 +668,38 @@ onMount(() => {
       <!-- ThemeBuilder Sidebar -->
       {#if $themeBuilderSidebarOpen}
         <aside class="flex fixed top-0 right-0 z-50 flex-col w-96 h-full bg-white border-l shadow-xl transition-transform duration-200 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700">
-          <ThemeBuilder>
-            {#snippet close()}
-              <button 
-                class="p-2 ml-auto rounded-lg transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200" 
-                onclick={() => themeBuilderSidebarOpen.set(false)} 
-                aria-label={$_('common.close_theme_builder', { default: 'Close Theme Builder' })}
-              >
-                <Icon src={XMark} class="w-6 h-6" />
-              </button>
-            {/snippet}
-          </ThemeBuilder>
+          {#if themeBuilderComponent}
+            <svelte:component this={themeBuilderComponent}>
+              {#snippet close()}
+                <button 
+                  class="p-2 ml-auto rounded-lg transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200" 
+                  onclick={() => themeBuilderSidebarOpen.set(false)} 
+                  aria-label={$_('common.close_theme_builder', { default: 'Close Theme Builder' })}
+                >
+                  <Icon src={XMark} class="w-6 h-6" />
+                </button>
+              {/snippet}
+            </svelte:component>
+          {:else}
+            <Skeleton variant="modal" />
+          {/if}
         </aside>
       {/if}
     </div>
   </div>
 {/if}
-<AboutModal bind:open={showAboutModal} onclose={() => (showAboutModal = false)} />
+
+{#if aboutModalComponent}
+  <svelte:component this={aboutModalComponent} bind:open={showAboutModal} onclose={() => (showAboutModal = false)} />
+{:else if showAboutModal}
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/70 backdrop-blur-sm"
+    onclick={() => (showAboutModal = false)}
+    role="dialog"
+    aria-label={$_('about.loading_modal', { default: 'Loading about information' })}
+  >
+    <div class="w-[680px] max-w-[92vw]" onclick={(event) => event.stopPropagation()}>
+      <Skeleton variant="modal" class="rounded-3xl" />
+    </div>
+  </div>
+{/if}

@@ -7,8 +7,7 @@
   import { Button } from '$lib/components/ui';
   import * as AlertDialog from "$lib/components/ui/alert-dialog/index.js";
   import RawDataTable from '$lib/components/RawDataTable.svelte';
-  import AnalyticsAreaChart from '$lib/components/analytics/AnalyticsAreaChart.svelte';
-  import AnalyticsBarChart from '$lib/components/analytics/AnalyticsBarChart.svelte';
+  import Skeleton from '$lib/components/Skeleton.svelte';
   import * as Card from "$lib/components/ui/card/index.js";
   import * as Select from "$lib/components/ui/select/index.js";
   import { Slider } from "$lib/components/ui/slider/index.js";
@@ -23,6 +22,28 @@
   let showDeleteModal = $state(false);
   let deleteLoading = $state(false);
   let deleteError: string | null = $state(null);
+
+  type AreaChartComponent = typeof import('$lib/components/analytics/AnalyticsAreaChart.svelte').default;
+  type BarChartComponent = typeof import('$lib/components/analytics/AnalyticsBarChart.svelte').default;
+
+  let areaChartComponent = $state<AreaChartComponent | null>(null);
+  let barChartComponent = $state<BarChartComponent | null>(null);
+  let chartsLoading = $state(false);
+
+  const loadChartComponents = async () => {
+    if (chartsLoading || (areaChartComponent && barChartComponent)) return;
+    chartsLoading = true;
+    try {
+      const [areaModule, barModule] = await Promise.all([
+        import('$lib/components/analytics/AnalyticsAreaChart.svelte'),
+        import('$lib/components/analytics/AnalyticsBarChart.svelte')
+      ]);
+      areaChartComponent = areaModule.default;
+      barChartComponent = barModule.default;
+    } finally {
+      chartsLoading = false;
+    }
+  };
 
   const studentId = 69;
 
@@ -172,6 +193,11 @@
       analyticsData = validAssessments;
       showGrabData = false;
 
+      // Lazy-load chart components after data is loaded
+      if (validAssessments.length > 0) {
+        loadChartComponents();
+      }
+
     } catch (e) {
       // Do not use console.error here to avoid global error page; show local recovery UI instead
       console.warn('Analytics: no local analytics file found or failed to parse. Prompting user to rebuild.');
@@ -179,6 +205,12 @@
       showGrabData = true;
     } finally {
       loading = false;
+    }
+  });
+
+  $effect(() => {
+    if (analyticsData && analyticsData.length > 0) {
+      loadChartComponents();
     }
   });
 
@@ -416,8 +448,13 @@
 
     <!-- Main Analytics Charts -->
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-2" in:fade={{ duration: 400, delay: 100 }}>
-      <AnalyticsAreaChart data={filteredData()} />
-      <AnalyticsBarChart data={filteredData()} />
+      {#if areaChartComponent && barChartComponent}
+        <svelte:component this={areaChartComponent} data={filteredData()} />
+        <svelte:component this={barChartComponent} data={filteredData()} />
+      {:else}
+        <Skeleton variant="chart" height="340px" />
+        <Skeleton variant="chart" height="340px" />
+      {/if}
     </div>
 
     <!-- Assessment Data Table -->

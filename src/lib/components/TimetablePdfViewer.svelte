@@ -1,7 +1,6 @@
 <script lang="ts">
   import Modal from './Modal.svelte';
   import { Icon, ArrowDownTray, XMark } from 'svelte-hero-icons';
-  import { saveAs } from 'file-saver';
 
   const {
     showPdfViewer,
@@ -40,8 +39,9 @@
   <div class="absolute top-6 right-6 z-10 flex gap-2 pointer-events-none">
     <button
       class="flex justify-center items-center w-10 h-10 rounded-xl transition-all duration-200 pointer-events-auto bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 shadow-md hover:shadow-lg"
-      onclick={() => {
+      onclick={async () => {
         if (pdfUrl) {
+          const { saveAs } = await import('file-saver');
           saveAs(pdfUrl, 'timetable.pdf');
         }
       }}
