@@ -162,22 +162,23 @@
         </button>
 
         <button
-          class="flex gap-3 items-center px-4 py-3 w-full text-left rounded-xl transition-all duration-200 text-zinc-700 hover:bg-accent-500/10 hover:text-accent-600 dark:text-zinc-200 dark:hover:text-accent-400 group"
+          class="flex gap-3 items-center px-4 py-3 w-full text-left rounded-xl transition-all duration-200 text-zinc-700 hover:bg-zinc-800/50 hover:text-white dark:text-zinc-200 group"
           onclick={() => {
             onToggleUserDropdown();
             goto('/user-documentation');
-          }}>
-          <div
-            class="flex justify-center items-center w-8 h-8 rounded-lg transition-colors bg-accent-100 group-hover:bg-accent-500/20 dark:bg-accent-900/30">
-            <Icon
-              src={BookOpen}
-              class="w-4 h-4 text-accent-600 dark:text-accent-400 group-hover:text-accent-600 dark:group-hover:text-accent-400" />
-          </div>
+        }}>
+    <div
+      class="flex justify-center items-center w-8 h-8 rounded-lg transition-colors bg-zinc-100 group-hover:bg-white/20 dark:bg-zinc-700/50">
+        <Icon
+      src={BookOpen}
+      class="w-4 h-4 text-zinc-600 dark:text-zinc-400 group-hover:text-white" />
+        </div>
           <div class="flex-1">
             <div class="font-medium">Get Help</div>
-            <div class="text-xs text-zinc-500 dark:text-zinc-400 group-hover:text-accent-600/80 dark:group-hover:text-accent-400/80">User guide & FAQ</div>
-          </div>
+              <div class="text-xs text-zinc-500 dark:text-zinc-400 group-hover:text-white/80">User guide & FAQ</div>
+            </div>
         </button>
+
 
         <div class="my-2 border-t border-zinc-200 dark:border-zinc-700/40"></div>
 
