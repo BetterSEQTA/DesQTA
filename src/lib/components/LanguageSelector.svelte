@@ -36,7 +36,6 @@
 
 <div class="relative">
 
-  <!-- Select dropdown (hover stays EXACTLY the same as before) -->
   <select
     bind:value={$locale}
     onchange={(e) => changeLanguage((e.target as HTMLSelectElement).value)}
@@ -84,7 +83,6 @@
     {/each}
   </select>
 
-  <!-- RIGHT SIDE ICON (only chevron now, globe removed) -->
   <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
     <div class="flex items-center">
       <Icon 
@@ -94,7 +92,6 @@
     </div>
   </div>
 
-  <!-- Compact mode left-side icon -->
   {#if compact}
     <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
       <span class="text-lg">
