@@ -2,7 +2,7 @@
   import { locale, availableLocales } from '../i18n';
   import { invoke } from '@tauri-apps/api/core';
   import { logger } from '../../utils/logger';
-  import { Icon, ChevronDown, GlobeAlt } from 'svelte-hero-icons';
+  import { Icon, ChevronDown } from 'svelte-hero-icons'; // Removed GlobeAlt
   
   interface Props {
     compact?: boolean;
@@ -11,7 +11,6 @@
   
   let { compact = false, showFlags = true }: Props = $props();
   
-  // Language change handler
   const changeLanguage = async (languageCode: string) => {
     try {
       locale.set(languageCode);
@@ -23,7 +22,6 @@
     }
   };
   
-  // Get current locale info
   const getCurrentLocale = () => {
     let currentLocale: string;
     const unsubscribe = locale.subscribe(value => {
@@ -37,7 +35,8 @@
 </script>
 
 <div class="relative">
-  <!-- Enhanced select with better styling -->
+
+  <!-- Select dropdown (hover stays EXACTLY the same as before) -->
   <select
     bind:value={$locale}
     onchange={(e) => changeLanguage((e.target as HTMLSelectElement).value)}
@@ -55,10 +54,12 @@
       font-medium
       shadow-lg dark:shadow-zinc-900/20
       transition-all duration-200 ease-out
+
       hover:bg-white/90 dark:hover:bg-zinc-700/90
       hover:border-indigo-400/80 dark:hover:border-indigo-500/80
       hover:shadow-xl
       hover:scale-[1.02]
+
       focus:outline-none 
       focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-400/50
       focus:ring-offset-2 dark:focus:ring-offset-zinc-800
@@ -82,24 +83,18 @@
       </option>
     {/each}
   </select>
-  
-  <!-- Enhanced dropdown arrow with globe icon -->
+
+  <!-- RIGHT SIDE ICON (only chevron now, globe removed) -->
   <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-    <div class="flex items-center space-x-1">
-      {#if !compact}
-        <Icon 
-          src={GlobeAlt} 
-          class="w-4 h-4 text-indigo-500 dark:text-indigo-400 opacity-70" 
-        />
-      {/if}
+    <div class="flex items-center">
       <Icon 
         src={ChevronDown} 
         class="w-4 h-4 text-zinc-600 dark:text-zinc-300 transition-transform duration-200" 
       />
     </div>
   </div>
-  
-  <!-- Current language display (for compact mode) -->
+
+  <!-- Compact mode left-side icon -->
   {#if compact}
     <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
       <span class="text-lg">
