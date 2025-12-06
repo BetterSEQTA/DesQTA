@@ -457,7 +457,7 @@ pub async fn create_login_window(app: tauri::AppHandle, url: String) -> Result<(
         // Spawn the login window with unique ID
         // Start with about:blank to allow clearing data before loading the actual login page
         let webview_window =
-            WebviewWindowBuilder::new(&app, &window_id, WebviewUrl::App("about:blank".into()))
+            WebviewWindowBuilder::new(&app, &window_id, WebviewUrl::External("about:blank".parse().unwrap()))
                 .title("SEQTA Login")
                 .inner_size(900.0, 700.0)
                 .build()
@@ -470,9 +470,9 @@ pub async fn create_login_window(app: tauri::AppHandle, url: String) -> Result<(
         }
 
         // Navigate to the login URL
-        let url_string = parsed_url.to_string();
+        let url_clone = parsed_url.clone();
         webview_window
-            .eval(&format!("window.location.href = '{}'", url_string))
+            .navigate(url_clone)
             .map_err(|e| format!("Failed to navigate: {}", e))?;
 
         // Clone handles for async block
