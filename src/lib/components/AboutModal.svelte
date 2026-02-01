@@ -105,7 +105,7 @@
           <div class="grid grid-cols-2 gap-3 sm:gap-4">
             <div class="col-span-2 flex justify-center">
              <img
-               src="https://contrib.rocks/image?repo=BetterSEQTA/DesQTA&columns=6"
+               src="https://contrib.rocks/image?repo=BetterSEQTA/DesQTA&columns=7"
                 alt={$_('about.contributors_alt') || 'Contributers to DesQTA'}
                 class="w-full max-w-[500px] h-auto object-contain"
                />
@@ -252,7 +252,7 @@
             </button>
             <button
               type="button"
-              onclick={() => openUrl('https://desqta.betterseqta.org')}
+              onclick={() => openUrl('https://betterseqta.org/desqta')}
              class="flex w-full items-center p-2 sm:p-3 space-x-2 sm:space-x-3 bg-zinc-100 rounded-xl transition-all duration-200 hover:bg-zinc-200 dark:bg-zinc-700/50 dark:hover:bg-zinc-700 group text-left">
               <div
                 class="flex justify-center items-center w-7 h-7 sm:w-8 sm:h-8 bg-zinc-800 rounded-lg dark:bg-zinc-200">
