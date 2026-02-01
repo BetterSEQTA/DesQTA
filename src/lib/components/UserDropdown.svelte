@@ -143,116 +143,104 @@
       transition:fly={{ y: -8, duration: 200, opacity: 0, easing: (t) => t * (2 - t) }}>
       <div class="p-2">
         <button
-          class="flex gap-3 items-center px-4 py-3 w-full text-left rounded-xl transition-all duration-200 ease-in-out transform hover:scale-[1.01] active:scale-[0.99] text-zinc-700 hover:bg-zinc-800/50 hover:text-white dark:text-zinc-200 group"
-          onclick={() => {
-            onToggleUserDropdown();
-            onShowAbout();
-          }}>
-          <div
-            class="flex justify-center items-center w-8 h-8 rounded-lg transition-colors bg-zinc-100 group-hover:bg-white/20 dark:bg-zinc-700/50">
-            <svg
-              class="w-4 h-4 text-zinc-600 dark:text-zinc-400 group-hover:text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-          <div class="flex-1">
-            <div class="font-medium"><T key="user.about" fallback="About" /></div>
-            <div class="text-xs text-zinc-500 dark:text-zinc-400 group-hover:text-white/80">
-              <T key="user.app_information" fallback="App information" />
-            </div>
-          </div>
-        </button>
+  class="flex gap-3 items-center px-4 py-3 w-full text-left rounded-xl transition-all duration-200 ease-in-out transform
+         hover:scale-[1.02] active:scale-[0.98]
+         text-zinc-700 dark:text-zinc-200
+         hover:bg-zinc-800/50 dark:hover:bg-zinc-700/50
+         hover:text-white dark:hover:text-white
+         group"
+  onclick={() => {
+    onToggleUserDropdown();
+    onShowAbout();
+  }}>
+  <div class="flex justify-center items-center w-8 h-8 rounded-lg transition-colors bg-zinc-100 dark:bg-zinc-700/50 group-hover:bg-white/20 dark:group-hover:bg-zinc-600/50">
+    <svg class="w-4 h-4 text-zinc-600 dark:text-zinc-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+  </div>
+  <div class="flex-1">
+    <div class="font-medium"><T key="user.about" fallback="About" /></div>
+    <div class="text-xs text-zinc-500 dark:text-zinc-400 group-hover:text-white/80">
+      <T key="user.app_information" fallback="App information" />
+    </div>
+  </div>
+</button>
 
-        <button
-          class="flex gap-3 items-center px-4 py-3 w-full text-left rounded-xl transition-all duration-200 text-zinc-700 hover:bg-accent-500/10 hover:text-accent-600 dark:text-zinc-200 dark:hover:text-accent-400 group"
-          onclick={() => {
-            onToggleUserDropdown();
-            goto('/user-documentation');
-          }}>
-          <div
-            class="flex justify-center items-center w-8 h-8 rounded-lg transition-colors bg-accent-100 group-hover:bg-accent-500/20 dark:bg-accent-900/30">
-            <Icon
-              src={BookOpen}
-              class="w-4 h-4 text-accent-600 dark:text-accent-400 group-hover:text-accent-600 dark:group-hover:text-accent-400" />
-          </div>
-          <div class="flex-1">
-            <div class="font-medium"><T key="user.get_help" fallback="Get Help" /></div>
-            <div
-              class="text-xs text-zinc-500 dark:text-zinc-400 group-hover:text-accent-600/80 dark:group-hover:text-accent-400/80">
-              <T key="user.user_guide_faq" fallback="User guide & FAQ" />
-            </div>
-          </div>
-        </button>
+<button
+  class="flex gap-3 items-center px-4 py-3 w-full text-left rounded-xl transition-all duration-200 ease-in-out transform
+         hover:scale-[1.02] active:scale-[0.98]
+         text-zinc-700 dark:text-zinc-200
+         hover:bg-zinc-800/50 dark:hover:bg-zinc-700/50
+         hover:text-white dark:hover:text-white
+         group"
+  onclick={() => {
+    onToggleUserDropdown();
+    goto('/user-documentation');
+  }}>
+  <div class="flex justify-center items-center w-8 h-8 rounded-lg transition-colors bg-zinc-100 dark:bg-zinc-700/50 group-hover:bg-white/20 dark:group-hover:bg-zinc-600/50">
+    <Icon src={BookOpen} class="w-4 h-4 text-zinc-600 dark:text-zinc-400 group-hover:text-white" />
+  </div>
+  <div class="flex-1">
+    <div class="font-medium"><T key="user.get_help" fallback="Get Help" /></div>
+    <div class="text-xs text-zinc-500 dark:text-zinc-400 group-hover:text-white/80">
+      <T key="user.user_guide_faq" fallback="User guide & FAQ" />
+    </div>
+  </div>
+</button>
 
-        <div class="my-2 border-t border-zinc-200 dark:border-zinc-700/40"></div>
+<ProfileSwitcher
+  onProfileSwitch={() => {
+    onToggleUserDropdown();
+    window.location.reload();
+  }}
+  class="px-2 py-1 hover:scale-[1.02] transition-all"
+/>
 
-        <ProfileSwitcher
-          onProfileSwitch={() => {
-            onToggleUserDropdown();
-            // Reload the app to switch profiles
-            window.location.reload();
-          }} />
+<button
+  class="flex gap-3 items-center px-4 py-3 w-full text-left rounded-xl transition-all duration-200 ease-in-out transform
+         hover:scale-[1.02] active:scale-[0.98]
+         text-zinc-700 dark:text-zinc-200
+         hover:bg-zinc-800/50 dark:hover:bg-zinc-700/50
+         hover:text-white dark:hover:text-white
+         group"
+  onclick={() => {
+    onToggleUserDropdown();
+    onLogout();
+  }}>
+  <div class="flex justify-center items-center w-8 h-8 rounded-lg transition-colors bg-zinc-100 dark:bg-zinc-700/50 group-hover:bg-white/20 dark:group-hover:bg-zinc-600/50">
+    <Icon src={ArrowRightOnRectangle} class="w-4 h-4 text-zinc-600 dark:text-zinc-400 group-hover:text-white" />
+  </div>
+  <div class="flex-1">
+    <div class="font-medium"><T key="user.sign_out" fallback="Sign out" /></div>
+    <div class="text-xs text-zinc-500 dark:text-zinc-400 group-hover:text-white/80">
+      <T key="user.end_session" fallback="End your session" />
+    </div>
+  </div>
+</button>
 
-        <div class="my-2 border-t border-zinc-200 dark:border-zinc-700/40"></div>
-
-        <button
-          class="flex gap-3 items-center px-4 py-3 w-full text-left rounded-xl transition-all duration-200 ease-in-out transform hover:scale-[1.01] active:scale-[0.99] text-zinc-700 hover:bg-zinc-800/50 hover:text-white dark:text-zinc-200 group"
-          onclick={() => {
-            onToggleUserDropdown();
-            onLogout();
-          }}>
-          <div
-            class="flex justify-center items-center w-8 h-8 rounded-lg transition-colors bg-zinc-100 group-hover:bg-white/20 dark:bg-zinc-700/50">
-            <Icon
-              src={ArrowRightOnRectangle}
-              class="w-4 h-4 text-zinc-600 dark:text-zinc-400 group-hover:text-white" />
-          </div>
-          <div class="flex-1">
-            <div class="font-medium"><T key="user.sign_out" fallback="Sign out" /></div>
-            <div class="text-xs text-zinc-500 dark:text-zinc-400 group-hover:text-white/80">
-              <T key="user.end_session" fallback="End your session" />
-            </div>
-          </div>
-        </button>
-
-        <div class="my-2 border-t border-zinc-200 dark:border-zinc-700/40"></div>
-
-        <button
-          class="flex gap-3 items-center px-4 py-3 w-full text-left rounded-xl transition-all duration-200 ease-in-out transform hover:scale-[1.01] active:scale-[0.99] text-red-600 hover:bg-red-900/20 hover:text-white dark:text-red-400 group"
-          onclick={() => {
-            onToggleUserDropdown();
-            // Call the quit command
-            invoke('quit');
-          }}>
-          <div
-            class="flex justify-center items-center w-8 h-8 rounded-lg transition-colors bg-red-100 group-hover:bg-red-500/20 dark:bg-red-900/30">
-            <svg
-              class="w-4 h-4 text-red-600 dark:text-red-400 group-hover:text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              ></path>
-            </svg>
-          </div>
-          <div class="flex-1">
-            <div class="font-medium"><T key="user.quit_app" fallback="Quit DesQTA" /></div>
-            <div class="text-xs text-red-500 dark:text-red-400 group-hover:text-white/80">
-              <T key="user.close_application" fallback="Close the application" />
-            </div>
-          </div>
-        </button>
+<button
+  class="flex gap-3 items-center px-4 py-3 w-full text-left rounded-xl transition-all duration-200 ease-in-out transform
+         hover:scale-[1.02] active:scale-[0.98]
+         text-red-600 dark:text-red-400
+         hover:bg-red-900/20 dark:hover:bg-red-900/30
+         hover:text-white dark:hover:text-white
+         group"
+  onclick={() => {
+    onToggleUserDropdown();
+    invoke('quit');
+  }}>
+  <div class="flex justify-center items-center w-8 h-8 rounded-lg transition-colors bg-red-100 dark:bg-red-900/30 group-hover:bg-red-500/20">
+    <svg class="w-4 h-4 text-red-600 dark:text-red-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+    </svg>
+  </div>
+  <div class="flex-1">
+    <div class="font-medium"><T key="user.quit_app" fallback="Quit DesQTA" /></div>
+    <div class="text-xs text-red-500 dark:text-red-400 group-hover:text-white/80">
+      <T key="user.close_application" fallback="Close the application" />
+    </div>
+    </div>
+      </button>
       </div>
     </div>
   {/if}
