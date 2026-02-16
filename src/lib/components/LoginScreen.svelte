@@ -434,8 +434,7 @@
       // Success - app will reload automatically
     } catch (error) {
       console.error('[DIRECT_LOGIN] Failed:', error);
-      directLoginError =
-        typeof error === 'string' ? error : get(_)('login.failed_credentials');
+      directLoginError = typeof error === 'string' ? error : get(_)('login.failed_credentials');
       directLoginLoading = false;
     }
   }

@@ -252,7 +252,8 @@
                 aria-label={$_('profile.delete_profile', { default: 'Delete profile' })}>
                 {#if deletingProfileId === profile.id}
                   <div
-                    class="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                    class="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin">
+                  </div>
                 {:else}
                   <Icon src={Trash} class="w-4 h-4" />
                 {/if}

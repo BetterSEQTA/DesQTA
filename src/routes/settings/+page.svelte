@@ -531,6 +531,16 @@ The Company reserves the right to terminate your access to the Service at any ti
     toastStore.success('Test notification sent');
   }
 
+  /** Safely get display name for a feed URL (hostname or 'New Feed'). Avoids Invalid URL errors. */
+  function getFeedDisplayName(url: string): string {
+    if (!url?.trim()) return 'New Feed';
+    try {
+      return new URL(url).hostname || 'New Feed';
+    } catch {
+      return 'New Feed';
+    }
+  }
+
   async function testFeed(url: string) {
     if (!url) {
       notify({
@@ -1964,7 +1974,7 @@ The Company reserves the right to terminate your access to the Service at any ti
                       <div class="flex gap-2 items-center mb-2">
                         <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                         <span class="text-sm font-medium truncate text-zinc-800 dark:text-zinc-200">
-                          {feed.url ? new URL(feed.url).hostname : 'New Feed'}
+                          {getFeedDisplayName(feed.url)}
                         </span>
                       </div>
                       <input
