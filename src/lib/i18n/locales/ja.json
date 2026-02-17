@@ -692,6 +692,23 @@
     "no_content": "このポータルには利用可能なコンテンツがありません。",
     "failed_to_load_content": "ポータルコンテンツの読み込みに失敗しました"
   },
+  "custom_pages": {
+    "title": "カスタムページ",
+    "description": "サイドバーメニューに表示される全画面ウェブサイト埋め込みを追加",
+    "add": "カスタムページを追加",
+    "edit": "編集",
+    "delete": "削除",
+    "open_external": "新しいウィンドウで開く",
+    "embed_blocked": "このサイトは埋め込めません",
+    "embed_blocked_description": "このウェブサイトはiframeでの表示をブロックしています。新しいウィンドウで開くことができます。",
+    "loading": "読み込み中...",
+    "not_found": "カスタムページが見つかりません",
+    "not_found_description": "このカスタムページは削除されたか、リンクが無効です。",
+    "go_to_settings": "設定へ",
+    "title_placeholder": "ページタイトル",
+    "no_pages": "カスタムページが設定されていません",
+    "no_pages_hint": "サイドバーに全画面ページとして埋め込むウェブサイトを追加"
+  },
   "welcome_portal": {
     "title": "ウェルカムポータル",
     "open_full_screen": "全画面で開く",

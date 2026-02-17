@@ -782,6 +782,23 @@
     "no_content": "Bu portal için içerik mevcut değil.",
     "failed_to_load_content": "Portal içeriği yüklenemedi"
   },
+  "custom_pages": {
+    "title": "Özel Sayfalar",
+    "description": "Kenar çubuğu menünüzde görünen tam ekran web sitesi yerleştirmeleri ekleyin",
+    "add": "Özel sayfa ekle",
+    "edit": "Düzenle",
+    "delete": "Kaldır",
+    "open_external": "Yeni pencerede aç",
+    "embed_blocked": "Bu site gömülemez",
+    "embed_blocked_description": "Bu web sitesi bir iframe'de görüntülenmeyi engelliyor. Yeni bir pencerede açabilirsiniz.",
+    "loading": "Yükleniyor...",
+    "not_found": "Özel sayfa bulunamadı",
+    "not_found_description": "Bu özel sayfa kaldırılmış olabilir veya bağlantı geçersiz.",
+    "go_to_settings": "Ayarlara git",
+    "title_placeholder": "Sayfa başlığı",
+    "no_pages": "Yapılandırılmış özel sayfa yok",
+    "no_pages_hint": "Kenar çubuğu menünüze tam ekran sayfalar olarak gömülecek web siteleri ekleyin"
+  },
   "welcome_portal": {
     "title": "Welcome Portal",
     "open_full_screen": "Open Full Screen",

@@ -101,7 +101,7 @@
   ];
 </script>
 
-<div class="flex justify-between items-center gap-4 px-4 py-4 border-b border-zinc-200 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm">
+<div class="relative z-[100] flex justify-between items-center gap-4 px-4 py-4 border-b border-zinc-200 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm">
   <!-- Week Navigation (hidden on mobile when in day view) -->
   {#if !(isMobile && viewMode === 'day')}
     <div class="flex gap-2 items-center">

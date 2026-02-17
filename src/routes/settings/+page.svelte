@@ -1770,7 +1770,8 @@ The Company reserves the right to terminate your access to the Service at any ti
                 aria-label="Zoom out">
                 <Icon src={Minus} class="w-5 h-5" />
               </button>
-              <span class="text-sm font-medium text-zinc-900 dark:text-white min-w-[4rem] text-center">
+              <span
+                class="text-sm font-medium text-zinc-900 dark:text-white min-w-[4rem] text-center">
                 {Math.round(zoomLevel * 100)}%
               </span>
               <button
