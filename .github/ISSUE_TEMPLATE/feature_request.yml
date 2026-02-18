@@ -1,20 +1,21 @@
 name: Feature request
-description: Suggest a new Feature to be added or replaced in DesQTA
+description: Suggest a new feature to be added or replaced in DesQTA
+title: "[FR] "
 labels: enhancement
-title: "[FR]"
-
 body:
   - type: checkboxes
     attributes:
       label: Confirm
       options:
-        - label: "Is this feature request related to a Bug report?"
+        - label: "I have searched existing issues to make sure this feature has not already been requested."
+          required: true
+        - label: "This feature request is not a duplicate of an existing bug report."
           required: false
 
   - type: input
     attributes:
-      label: Bug report link
-      description: "If this feature request is related to a bug report, please insert the link to the bug report here"
+      label: Related bug report link
+      description: "If this feature request is related to a bug report, please insert the link here."
       placeholder: "https://github.com/BetterSEQTA/DesQTA/issues/..."
     validations:
       required: false
@@ -22,31 +23,77 @@ body:
   - type: markdown
     attributes:
       value: |
-        ## Feature details
-        Before you request a feature, [please search](https://github.com/BetterSEQTA/DesQTA/issues) if it has already been requested. (Make sure to check closed issues as well!)
+        ## Feature overview
+        Provide a concise description of the feature and its purpose.
+
+  - type: input
+    attributes:
+      label: Feature title
+      description: "Give a short descriptive name for this feature."
+      placeholder: "Example: Dark mode for settings"
+    validations:
+      required: true
 
   - type: dropdown
     attributes:
       label: Feature type
-      multiple: false
+      description: "Choose the type of feature."
       options:
         - Graphical
         - Functional
+        - Performance
         - Not Sure
     validations:
       required: true
 
-  - type: input
+  - type: textarea
     attributes:
-      label: Feature Details
-      description: Please write, with as much detail as possible, what you would like to see from this feature.
-      placeholder: It would be cool if...
+      label: Detailed description
+      description: "Explain in detail what this feature should do."
+      placeholder: "It would allow users to switch the theme to dark mode throughout the app."
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Use case
+      description: "Explain why this feature is useful and who it helps."
+      placeholder: "Users who work at night or in low-light conditions would benefit from reduced eye strain."
+    validations:
+      required: false
+
+  - type: dropdown
+    attributes:
+      label: Priority
+      description: "How important is this feature?"
+      options:
+        - Low
+        - Medium
+        - High
+        - Critical
     validations:
       required: false
 
   - type: textarea
     attributes:
-      label: Additional details
-      description: Anything else that would help describe your vision (reference images, descriptions, etc)
+      label: Alternatives considered
+      description: "If applicable, describe any alternative solutions or workarounds."
+      placeholder: "Currently users switch to external apps to reduce eye strain."
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Possible implementation notes
+      description: "If you have ideas about how this feature could be implemented, write them here."
+      placeholder: "Add a theme toggle in the settings menu and save the preference locally."
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Additional context
+      description: "Attach reference images, sketches, or any extra info that can help describe the feature."
+      placeholder: "Screenshots, links, or diagrams."
     validations:
       required: false

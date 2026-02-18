@@ -2,3 +2,7 @@ contact_links:
   - name: BetterSEQTA Community Support
     url: https://discord.gg/YzmbnCDkat
     about: Join our discord for community updates, discussion, and more!
+  - name: Troubleshooting docs & FAQ
+    url: https://github.com/betterSEQTA/DesQTA/tree/update-PR-templates/docs
+    about: Check this first if you're having problems with DesQTA
+    

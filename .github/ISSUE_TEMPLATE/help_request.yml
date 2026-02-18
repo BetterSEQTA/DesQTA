@@ -1,0 +1,65 @@
+name: Support / Help Request
+description: Ask for help or clarification regarding DesQTA usage or setup.
+title: "[HELP] "
+labels: support
+body:
+  - type: checkboxes
+    attributes:
+      label: Confirm
+      options:
+        - label: "I have searched the existing issues and documentation to find an answer first."
+          required: true
+
+  - type: input
+    attributes:
+      label: Question title
+      description: "Provide a short, descriptive title for your question."
+      placeholder: "Example: How do I enable dark mode?"
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Detailed description
+      description: "Explain your question, problem, or confusion in detail."
+      placeholder: "Describe what you tried, what you expected, and what happened."
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Steps you have tried
+      description: "List the steps you've already taken to solve the issue."
+      placeholder: "1. Opened the app\n2. Checked Settings\n3. Tried enabling..."
+    validations:
+      required: false
+
+  - type: input
+    attributes:
+      label: Application version
+      description: "Which version of DesQTA are you using?"
+      placeholder: "e.g., v1.6.2"
+    validations:
+      required: false
+
+  - type: dropdown
+    attributes:
+      label: Operating system
+      description: "Select your OS."
+      options:
+        - Windows
+        - MacOS
+        - Ubuntu
+        - Arch
+        - Other Linux-based OS
+        - Other Non Linux-based OS
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Additional context
+      description: "Attach screenshots, logs, or any other information that may help."
+      placeholder: "You can drag files here or paste links."
+    validations:
+      required: false

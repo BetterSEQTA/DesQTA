@@ -1,18 +1,68 @@
 name: Bug report
-description: Report an issue with the program in its unmodified state. For other issues, use Discord.
+description: Report a reproducible issue with the program in its unmodified state. For general questions or non-bug issues, use Discord.
 labels: bug
-title: "[BUG]"
-type: "Bug"
+title: "[BUG] "
 body:
   - type: markdown
     attributes:
       value: |
-        Before reporting an issue, [please search](https://github.com/BetterSEQTA/DesQTA/issues) to make sure it has not already been reported (make sure to search closed issues as well!).
+        **Before reporting an issue, please:**
+        1. Search existing issues (including closed ones) to avoid duplicates: [Search Issues](https://github.com/BetterSEQTA/DesQTA/issues)
+        2. Ensure the program is unmodified and no unsupported plugins are installed.
+        3. Provide as much detail as possible including steps to reproduce, screenshots, and logs.
+
+  - type: input
+    attributes:
+      label: Bug title
+      description: Give a short descriptive title for the bug.
+      placeholder: "Example: Crash when opening settings"
+    validations:
+      required: true
 
   - type: textarea
     attributes:
       label: Describe the bug
-      description: Describe your issue. For general issues and questions you'll get a faster answer [from our Discord.](https://discord.gg/YzmbnCDkat)
+      description: Provide a clear and detailed description of the bug.
+      placeholder: "What happened, what you expected, and any error messages."
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      description: List the steps to reproduce the bug. Include every action leading to the problem.
+      placeholder: |
+        1. Open the program  
+        2. Go to Settings → Plugins  
+        3. Click "Enable Experimental Feature"
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Expected behavior
+      description: Describe what you expected to happen.
+      placeholder: "The settings window should open without crashing."
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Actual behavior
+      description: Describe what actually happened.
+      placeholder: "The program crashes immediately and shows an error in the console."
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: Severity
+      description: How critical is this bug?
+      options:
+        - Low (minor UI issue, no functional impact)
+        - Medium (affects functionality but there is a workaround)
+        - High (major functionality broken)
+        - Critical (program crashes or data loss)
     validations:
       required: true
 
@@ -20,13 +70,13 @@ body:
     attributes:
       label: Application version
       description: What version of the program are you using?
-      placeholder: (eg v1.6.2)
+      placeholder: "e.g., v1.6.2"
     validations:
       required: true
 
   - type: dropdown
     attributes:
-      label: OS
+      label: Operating system
       description: Which OS are you using?
       options:
         - Windows
@@ -38,18 +88,34 @@ body:
     validations:
       required: true
 
-  - type: checkboxes
+  - type: input
     attributes:
-      label: Confirm
-      options:
-        - label: This bug report is about an issue with the program itself. I have not modified the program nor added any unsupported plugins. If this is not the case, I know that I should post the issue to the extension's Discord support channel instead.
-          required: true
+      label: OS version
+      description: The specific version/build of your OS.
+      placeholder: "e.g., Windows 11 22H2"
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Logs
+      description: Include any relevant console logs or error messages.
+      placeholder: "Paste logs here or attach a log file."
+    validations:
+      required: false
 
   - type: textarea
     attributes:
       label: Additional context
-      description: Screenshots, video or any other information. Include photos of the console if possible
+      description: Screenshots, video, or other information that could help diagnose the issue.
       placeholder: |
-        Tip: You can attach images or log files by clicking this area to highlight it and then dragging files in.
+        Tip: You can attach images or log files by dragging them here.
     validations:
       required: false
+
+  - type: checkboxes
+    attributes:
+      label: Confirm
+      options:
+        - label: This bug report is about an issue with the program itself. I have not modified the program nor added unsupported plugins. If this is not the case, I will post the issue in the Discord support channel instead.
+          required: true

@@ -1,0 +1,65 @@
+name: New Contributor
+description: Guide new contributors to get started with DesQTA development.
+title: "[CONTRIB] "
+labels: contributor
+body:
+  - type: checkboxes
+    attributes:
+      label: Confirm
+      options:
+        - label: "I have read the contribution guidelines and code of conduct."
+          required: true
+        - label: "I am not submitting sensitive or private data."
+          required: true
+
+  - type: input
+    attributes:
+      label: Your name / handle
+      description: "How should we refer to you in communications?"
+      placeholder: "Example: stroep"
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: GitHub username
+      description: "Provide your GitHub username."
+      placeholder: "Example: stroepwafel"
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: Areas of interest
+      description: "Select the areas you want to contribute to."
+      options:
+        - Code / Development
+        - Documentation / Wiki
+        - Design / UI
+        - Testing / QA
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Skills / experience
+      description: "Describe your relevant skills or previous experience."
+      placeholder: "e.g., Python, React, Unity, graphic design"
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Goals / Motivation
+      description: "Why do you want to contribute to DesQTA?"
+      placeholder: "Describe your goals or areas you want to learn about."
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Next steps
+        A maintainer will review your submission and reach out with guidance on how to get started. 
+        You may be invited to join our Discord for mentoring and updates.
