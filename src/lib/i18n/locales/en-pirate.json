@@ -427,7 +427,10 @@
     "export_pdf": "Share as Scroll",
     "pdf_description": "Portable scroll format",
     "export_ical": "Share as Ship's Calendar",
-    "ical_description": "Calendar (.ics) format fer yer ship's calendar"
+    "ical_description": "Calendar (.ics) format fer yer ship's calendar",
+    "download_csv_success": "Timetable downloaded to Downloads",
+    "download_pdf_success": "Timetable downloaded to Downloads",
+    "download_ical_success": "Timetable downloaded to Downloads"
   },
   "study": {
     "page_description": "Plan, track, and focus on yer upcoming ship duties, matey.",

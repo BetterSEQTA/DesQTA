@@ -421,7 +421,10 @@
     "export_pdf": "Als PDF exportieren",
     "pdf_description": "Portables Dokumentformat",
     "export_ical": "Als iCal exportieren",
-    "ical_description": "Kalenderformat (.ics)"
+    "ical_description": "Kalenderformat (.ics)",
+    "download_csv_success": "Stundenplan in Downloads gespeichert",
+    "download_pdf_success": "Stundenplan in Downloads gespeichert",
+    "download_ical_success": "Stundenplan in Downloads gespeichert"
   },
   "study": {
     "page_description": "Planen, verfolgen und konzentrieren Sie sich auf Ihre anstehende Arbeit.",

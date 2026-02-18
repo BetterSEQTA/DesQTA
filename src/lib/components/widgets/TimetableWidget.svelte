@@ -12,6 +12,8 @@
   import { getMonday, formatDate, parseDate, getDayIndex } from '../../utils/timetableUtils';
   import { exportToCSV, exportToPDF, exportToiCal } from '../../utils/timetableExport';
   import { updateUrlParam } from '../../utils/urlParams';
+  import { toastStore } from '../../stores/toast';
+  import { _ } from '../../i18n';
   import TimetableHeader from './timetable/TimetableHeader.svelte';
   import TimetableWeekView from './timetable/TimetableWeekView.svelte';
   import TimetableDayView from './timetable/TimetableDayView.svelte';
@@ -223,7 +225,9 @@
       const lessonDate = parseDate(lesson.date);
       return lessonDate >= weekStart && lessonDate <= new Date(weekStart.getTime() + 4 * 86400000);
     });
-    exportToCSV(weekLessons, weekStart);
+    if (exportToCSV(weekLessons, weekStart)) {
+      toastStore.success($_('timetable.download_csv_success') || 'Timetable downloaded to Downloads');
+    }
   }
 
   function handleExportPdf() {
@@ -231,7 +235,9 @@
       const lessonDate = parseDate(lesson.date);
       return lessonDate >= weekStart && lessonDate <= new Date(weekStart.getTime() + 4 * 86400000);
     });
-    exportToPDF(weekLessons, weekStart);
+    if (exportToPDF(weekLessons, weekStart)) {
+      toastStore.success($_('timetable.download_pdf_success') || 'Timetable downloaded to Downloads');
+    }
   }
 
   function handleExportIcal() {
@@ -239,7 +245,9 @@
       const lessonDate = parseDate(lesson.date);
       return lessonDate >= weekStart && lessonDate <= new Date(weekStart.getTime() + 4 * 86400000);
     });
-    exportToiCal(weekLessons, weekStart);
+    if (exportToiCal(weekLessons, weekStart)) {
+      toastStore.success($_('timetable.download_ical_success') || 'Timetable downloaded to Downloads');
+    }
   }
 
   // Reload lessons when reloadKey changes (for back/forward navigation)

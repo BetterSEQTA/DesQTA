@@ -6,9 +6,9 @@ import type { TimetableLesson } from '../types/timetable';
 import { formatDate, parseDate, timeToMinutes } from './timetableUtils';
 
 /**
- * Export lessons to CSV format
+ * Export lessons to CSV format. Returns true if export succeeded.
  */
-export function exportToCSV(lessons: TimetableLesson[], weekStart: Date): void {
+export function exportToCSV(lessons: TimetableLesson[], weekStart: Date): boolean {
   const headers = ['Date', 'Day', 'Subject', 'Code', 'Time', 'Teacher', 'Room'];
   const rows = lessons.map((lesson) => {
     const date = parseDate(lesson.date);
@@ -34,12 +34,13 @@ export function exportToCSV(lessons: TimetableLesson[], weekStart: Date): void {
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const fileName = `timetable_${formatDate(weekStart)}.csv`;
   saveAs(blob, fileName);
+  return true;
 }
 
 /**
- * Export lessons to PDF format
+ * Export lessons to PDF format. Returns true if export succeeded.
  */
-export function exportToPDF(lessons: TimetableLesson[], weekStart: Date): void {
+export function exportToPDF(lessons: TimetableLesson[], weekStart: Date): boolean {
   const doc = new jsPDF();
   const endDate = new Date(weekStart);
   endDate.setDate(weekStart.getDate() + 4);
@@ -81,12 +82,13 @@ export function exportToPDF(lessons: TimetableLesson[], weekStart: Date): void {
 
   const fileName = `timetable_${formatDate(weekStart)}.pdf`;
   doc.save(fileName);
+  return true;
 }
 
 /**
- * Export lessons to iCal format
+ * Export lessons to iCal format. Returns true if export succeeded.
  */
-export function exportToiCal(lessons: TimetableLesson[], weekStart: Date): void {
+export function exportToiCal(lessons: TimetableLesson[], weekStart: Date): boolean {
   const events = lessons.map((lesson) => {
     const date = parseDate(lesson.date);
     const [startHour, startMinute] = lesson.from.split(':').map(Number);
@@ -129,12 +131,14 @@ export function exportToiCal(lessons: TimetableLesson[], weekStart: Date): void 
 
   if (error) {
     console.error('Error creating iCal events:', error);
-    return;
+    return false;
   }
 
   if (value) {
     const blob = new Blob([value], { type: 'text/calendar;charset=utf-8;' });
     const fileName = `timetable_${formatDate(weekStart)}.ics`;
     saveAs(blob, fileName);
+    return true;
   }
+  return false;
 }

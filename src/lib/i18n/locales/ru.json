@@ -468,7 +468,10 @@
     "export_pdf": "Экспорт как PDF",
     "pdf_description": "Формат переносимого документа",
     "export_ical": "Экспорт как iCal",
-    "ical_description": "Формат календаря (.ics)"
+    "ical_description": "Формат календаря (.ics)",
+    "download_csv_success": "Расписание загружено в папку «Загрузки»",
+    "download_pdf_success": "Расписание загружено в папку «Загрузки»",
+    "download_ical_success": "Расписание загружено в папку «Загрузки»"
   },
   "study": {
     "page_description": "Планируйте, отслеживайте и сосредоточьтесь на предстоящей работе.",

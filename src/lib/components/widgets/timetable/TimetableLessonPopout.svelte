@@ -2,12 +2,10 @@
   import { goto } from '$app/navigation';
   import { fly } from 'svelte/transition';
   import { cubicInOut } from 'svelte/easing';
-  import { Button } from '../../ui';
   import {
     Icon,
     BookOpen,
     DocumentText,
-    CalendarDays,
     AcademicCap,
     BuildingOffice,
     Clock,
@@ -171,20 +169,14 @@
     onClose();
   }
 
-  async function handleViewTimetable() {
-    if (!lesson) return;
-    const formattedDate = formatDate(parseDate(lesson.date));
-    await goto(`/timetable?date=${formattedDate}`);
-    onClose();
-  }
 </script>
 
 {#if open && lesson && anchorElement}
   {#key lesson.id}
     <div
       bind:this={popoutElement}
-      class="fixed z-50 w-80 max-w-[calc(100vw-2rem)] rounded-xl border shadow-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-zinc-200 dark:border-zinc-700 max-h-[calc(100vh-2rem)] overflow-y-auto"
-      style="top: {position.top}px; left: {position.left}px; border-left-color: {lesson.colour}; border-left-width: 4px;"
+      class="fixed z-50 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border shadow-2xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 max-h-[calc(100vh-2rem)] overflow-y-auto"
+      style="top: {position.top}px; left: {position.left}px; border-left: 4px solid {lesson.colour};"
       transition:fly={{
         y: transitionDirection === 'down' ? -10 : 10,
         duration: 200,
@@ -194,101 +186,75 @@
       aria-modal="true"
       aria-labelledby="lesson-popout-title">
       <!-- Header -->
-      <div
-        class="flex items-start justify-between p-4 border-b border-zinc-200 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md">
-        <div class="flex-1 min-w-0 pr-2">
-          <h2
-            id="lesson-popout-title"
-            class="text-lg font-bold text-zinc-900 dark:text-white mb-0.5 truncate">
-            {lesson.description}
-          </h2>
-          <p class="text-xs text-zinc-600 dark:text-zinc-400 truncate">{lesson.code}</p>
-        </div>
+      <div class="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
+        <h2
+          id="lesson-popout-title"
+          class="text-base font-bold text-zinc-900 dark:text-white truncate">
+          {lesson.description}
+        </h2>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">{lesson.code}</p>
       </div>
 
-      <!-- Content -->
-      <div class="p-4 space-y-3">
-        <!-- Date and Time -->
-        <div class="flex items-start gap-2">
-          <div
-            class="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 shrink-0">
-            <Icon src={Clock} class="w-4 h-4" />
+      <!-- Content - compact info grid -->
+      <div class="p-3 space-y-2">
+        <div class="flex items-center gap-2.5 text-sm">
+          <div class="flex justify-center items-center w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-700 shrink-0">
+            <Icon src={Clock} class="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400" />
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">Date & Time</p>
-            <p class="text-sm text-zinc-900 dark:text-white">{formatLessonDate(lesson.date)}</p>
-            <p class="text-xs text-zinc-600 dark:text-zinc-400">
-              {lesson.from} - {lesson.until}
-            </p>
+            <p class="text-zinc-900 dark:text-white truncate">{formatLessonDate(lesson.date)}</p>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400">{lesson.from} – {lesson.until}</p>
           </div>
         </div>
 
-        <!-- Teacher -->
         {#if lesson.staff}
-          <div class="flex items-start gap-2">
-            <div
-              class="flex items-center justify-center w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 shrink-0">
-              <Icon src={AcademicCap} class="w-4 h-4" />
+          <div class="flex items-center gap-2.5 text-sm">
+            <div class="flex justify-center items-center w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-700 shrink-0">
+              <Icon src={AcademicCap} class="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400" />
             </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">Teacher</p>
-              <p class="text-sm text-zinc-900 dark:text-white truncate">{lesson.staff}</p>
-            </div>
+            <p class="text-zinc-900 dark:text-white truncate flex-1">{lesson.staff}</p>
           </div>
         {/if}
 
-        <!-- Room -->
         {#if lesson.room}
-          <div class="flex items-start gap-2">
-            <div
-              class="flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 shrink-0">
-              <Icon src={BuildingOffice} class="w-4 h-4" />
+          <div class="flex items-center gap-2.5 text-sm">
+            <div class="flex justify-center items-center w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-700 shrink-0">
+              <Icon src={BuildingOffice} class="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400" />
             </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">Room</p>
-              <p class="text-sm text-zinc-900 dark:text-white">Room {lesson.room}</p>
-            </div>
+            <p class="text-zinc-900 dark:text-white">Room {lesson.room}</p>
           </div>
         {/if}
 
-        <!-- Attendance -->
         {#if lesson.attendanceTitle && lesson.attendanceTitle.trim()}
-          <div
-            class="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-            <p class="text-xs font-medium text-amber-800 dark:text-amber-200 mb-0.5">
-              Attendance Status
-            </p>
-            <p class="text-xs text-amber-700 dark:text-amber-300">{lesson.attendanceTitle}</p>
+          <div class="p-2 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800">
+            <p class="text-xs font-medium text-amber-800 dark:text-amber-200">Attendance</p>
+            <p class="text-xs text-amber-700 dark:text-amber-300 truncate">{lesson.attendanceTitle}</p>
           </div>
         {/if}
       </div>
 
-      <!-- Actions -->
-      <div
-        class="p-4 border-t border-zinc-200 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md space-y-2">
+      <!-- Actions - consolidated DesQTA style -->
+      <div class="p-2 border-t border-zinc-200 dark:border-zinc-700 space-y-1">
         {#if lesson.programmeID !== 0}
-          <Button
-            variant="primary"
-            class="w-full justify-center gap-2 text-sm py-2"
-            icon={BookOpen}
+          <button
+            type="button"
+            class="flex gap-3 items-center px-3 py-2.5 w-full text-left rounded-xl transition-all duration-200 text-zinc-700 dark:text-zinc-200 hover:accent-bg hover:text-white group focus:outline-none focus:ring-2 accent-ring"
             onclick={handleViewCourse}>
-            View Course
-          </Button>
-          <Button
-            variant="secondary"
-            class="w-full justify-center gap-2 text-sm py-2"
-            icon={DocumentText}
+            <div class="flex justify-center items-center w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-700 group-hover:bg-white/20 shrink-0">
+              <Icon src={BookOpen} class="w-4 h-4 text-zinc-600 dark:text-zinc-400 group-hover:text-white" />
+            </div>
+            <span class="font-medium text-sm">View Course</span>
+          </button>
+          <button
+            type="button"
+            class="flex gap-3 items-center px-3 py-2.5 w-full text-left rounded-xl transition-all duration-200 text-zinc-700 dark:text-zinc-200 hover:accent-bg hover:text-white group focus:outline-none focus:ring-2 accent-ring"
             onclick={handleViewAssessments}>
-            View Assessments
-          </Button>
+            <div class="flex justify-center items-center w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-700 group-hover:bg-white/20 shrink-0">
+              <Icon src={DocumentText} class="w-4 h-4 text-zinc-600 dark:text-zinc-400 group-hover:text-white" />
+            </div>
+            <span class="font-medium text-sm">View Assessments</span>
+          </button>
         {/if}
-        <Button
-          variant="ghost"
-          class="w-full justify-center gap-2 text-sm py-2"
-          icon={CalendarDays}
-          onclick={handleViewTimetable}>
-          View Full Timetable
-        </Button>
       </div>
     </div>
   {/key}

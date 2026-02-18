@@ -463,7 +463,10 @@
     "export_pdf": "Export as PDF",
     "pdf_description": "Portable document format",
     "export_ical": "Export as iCal",
-    "ical_description": "Calendar (.ics) format"
+    "ical_description": "Calendar (.ics) format",
+    "download_csv_success": "Timetable downloaded to Downloads",
+    "download_pdf_success": "Timetable downloaded to Downloads",
+    "download_ical_success": "Timetable downloaded to Downloads"
   },
   "study": {
     "page_description": "Plan, track, and focus on your upcoming work.",

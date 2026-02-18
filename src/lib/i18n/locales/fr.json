@@ -424,7 +424,10 @@
     "export_pdf": "Exporter en PDF",
     "pdf_description": "Format de document portable",
     "export_ical": "Exporter en iCal",
-    "ical_description": "Format calendrier (.ics)"
+    "ical_description": "Format calendrier (.ics)",
+    "download_csv_success": "Emploi du temps téléchargé dans Téléchargements",
+    "download_pdf_success": "Emploi du temps téléchargé dans Téléchargements",
+    "download_ical_success": "Emploi du temps téléchargé dans Téléchargements"
   },
   "study": {
     "page_description": "Planifiez, suivez et concentrez-vous sur votre travail à venir.",

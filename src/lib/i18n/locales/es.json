@@ -421,7 +421,10 @@
     "export_pdf": "Exportar como PDF",
     "pdf_description": "Formato de documento portable",
     "export_ical": "Exportar como iCal",
-    "ical_description": "Formato de calendario (.ics)"
+    "ical_description": "Formato de calendario (.ics)",
+    "download_csv_success": "Horario descargado en Descargas",
+    "download_pdf_success": "Horario descargado en Descargas",
+    "download_ical_success": "Horario descargado en Descargas"
   },
   "study": {
     "page_description": "Planifica, rastrea y enfócate en tu trabajo próximo.",

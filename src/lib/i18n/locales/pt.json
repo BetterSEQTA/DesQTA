@@ -468,7 +468,10 @@
     "export_pdf": "Exportar como PDF",
     "pdf_description": "Formato de documento portátil",
     "export_ical": "Exportar como iCal",
-    "ical_description": "Formato de calendário (.ics)"
+    "ical_description": "Formato de calendário (.ics)",
+    "download_csv_success": "Horário baixado para Downloads",
+    "download_pdf_success": "Horário baixado para Downloads",
+    "download_ical_success": "Horário baixado para Downloads"
   },
   "study": {
     "page_description": "Planeje, acompanhe e foque no seu trabalho futuro.",

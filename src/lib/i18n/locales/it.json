@@ -468,7 +468,10 @@
     "export_pdf": "Esporta come PDF",
     "pdf_description": "Formato documento portatile",
     "export_ical": "Esporta come iCal",
-    "ical_description": "Formato calendario (.ics)"
+    "ical_description": "Formato calendario (.ics)",
+    "download_csv_success": "Orario scaricato in Downloads",
+    "download_pdf_success": "Orario scaricato in Downloads",
+    "download_ical_success": "Orario scaricato in Downloads"
   },
   "study": {
     "page_description": "Pianifica, monitora e concentrati sul tuo lavoro futuro.",

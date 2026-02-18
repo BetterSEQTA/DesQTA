@@ -421,7 +421,10 @@
     "export_pdf": "PDFとしてエクスポート",
     "pdf_description": "ポータブルドキュメント形式",
     "export_ical": "iCalとしてエクスポート",
-    "ical_description": "カレンダー（.ics）形式"
+    "ical_description": "カレンダー（.ics）形式",
+    "download_csv_success": "時間割をダウンロードフォルダに保存しました",
+    "download_pdf_success": "時間割をダウンロードフォルダに保存しました",
+    "download_ical_success": "時間割をダウンロードフォルダに保存しました"
   },
   "study": {
     "page_description": "今後の作業を計画し、追跡し、集中しましょう。",

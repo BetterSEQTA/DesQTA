@@ -421,7 +421,10 @@
     "export_pdf": "导出为PDF",
     "pdf_description": "便携式文档格式",
     "export_ical": "导出为iCal",
-    "ical_description": "日历(.ics)格式"
+    "ical_description": "日历(.ics)格式",
+    "download_csv_success": "课程表已下载到下载文件夹",
+    "download_pdf_success": "课程表已下载到下载文件夹",
+    "download_ical_success": "课程表已下载到下载文件夹"
   },
   "study": {
     "page_description": "计划、跟踪和专注于您即将到来的工作。",

@@ -42,8 +42,8 @@
 <button
   bind:this={blockElement}
   type="button"
-  class="lesson-block flex flex-col justify-start rounded-xl border-l-4 shadow-lg hover:shadow-xl transition-all duration-200 dark:bg-zinc-800/95 backdrop-blur-xs group cursor-pointer select-none h-full w-full text-left {densityClasses}"
-  style="border-color: {lesson.colour}; background-color: {lesson.colour}33; min-height: 54px;"
+  class="lesson-block flex flex-col justify-start rounded-xl border-l-4 shadow-lg hover:shadow-xl transition-all duration-200 bg-white dark:bg-zinc-800 group cursor-pointer select-none h-full w-full text-left {densityClasses}"
+  style="border-color: {lesson.colour}; min-height: 54px;"
   class:active={active}
   class:overlap={overlap}
   onclick={handleClick}
