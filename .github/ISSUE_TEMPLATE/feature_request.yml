@@ -26,14 +26,6 @@ body:
         ## Feature overview
         Provide a concise description of the feature and its purpose.
 
-  - type: input
-    attributes:
-      label: Feature title
-      description: "Give a short descriptive name for this feature."
-      placeholder: "Example: Dark mode for settings"
-    validations:
-      required: true
-
   - type: dropdown
     attributes:
       label: Feature type

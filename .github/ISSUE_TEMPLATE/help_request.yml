@@ -10,14 +10,6 @@ body:
         - label: "I have searched the existing issues and documentation to find an answer first."
           required: true
 
-  - type: input
-    attributes:
-      label: Question title
-      description: "Provide a short, descriptive title for your question."
-      placeholder: "Example: How do I enable dark mode?"
-    validations:
-      required: true
-
   - type: textarea
     attributes:
       label: Detailed description

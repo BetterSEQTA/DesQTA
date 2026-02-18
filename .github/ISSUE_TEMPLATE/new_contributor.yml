@@ -28,6 +28,14 @@ body:
     validations:
       required: true
 
+  - type: input
+    attributes:
+      label: Discord Handle
+      description: "Provide your Discord Handle."
+      placeholder: "Example: stroepwafel"
+    validations:
+      required: true
+
   - type: dropdown
     attributes:
       label: Areas of interest

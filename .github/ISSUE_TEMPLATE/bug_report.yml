@@ -11,14 +11,6 @@ body:
         2. Ensure the program is unmodified and no unsupported plugins are installed.
         3. Provide as much detail as possible including steps to reproduce, screenshots, and logs.
 
-  - type: input
-    attributes:
-      label: Bug title
-      description: Give a short descriptive title for the bug.
-      placeholder: "Example: Crash when opening settings"
-    validations:
-      required: true
-
   - type: textarea
     attributes:
       label: Describe the bug
