@@ -83,6 +83,7 @@
       success = 'Successfully authenticated with BetterSEQTA Plus account';
       password = ''; // Clear password
       toastStore.success('Successfully authenticated with BetterSEQTA Plus');
+      dispatch('cloudauthchange');
     } catch (err) {
       error = `Authentication failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
       toastStore.error('Authentication failed');
@@ -117,6 +118,7 @@
       isAuthenticated = true;
       success = 'Successfully authenticated with Discord';
       toastStore.success('Successfully authenticated with Discord');
+      dispatch('cloudauthchange');
     } catch (err) {
       error = `Discord authentication failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
       toastStore.error('Discord authentication failed');
@@ -133,6 +135,7 @@
       isAuthenticated = false;
       success = 'Successfully logged out';
       toastStore.success('Successfully logged out');
+      dispatch('cloudauthchange');
     } catch (err) {
       error = `Logout failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
       toastStore.error('Logout failed');

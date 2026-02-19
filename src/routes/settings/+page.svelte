@@ -2323,7 +2323,8 @@ The Company reserves the right to terminate your access to the Service at any ti
   onSettingsUpload={handleSettingsUpload}
   onSettingsDownload={handleSettingsDownload}
   onSave={() => saveSettings({ skipReload: true })}
-  on:close={closeCloudSyncModal} />
+  on:close={closeCloudSyncModal}
+  on:cloudauthchange={loadCloudUser} />
 
 <!-- Troubleshooting Modal -->
 <TroubleshootingModal open={showTroubleshootingModal} onclose={closeTroubleshootingModal} />
