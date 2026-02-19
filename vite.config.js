@@ -1,10 +1,50 @@
 import { defineConfig } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
+import { compileModule } from 'svelte/compiler';
+import path from 'path';
 // @ts-expect-error - fs is a Node.js built-in module
 import fs from 'fs';
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
+
+/**
+ * Compiles layerchart's .svelte.js files (which contain Svelte 5 runes like $derived.by)
+ * before Rollup's CommonJS plugin tries to parse them as plain JavaScript.
+ * Uses resolveId + load to serve compiled content under a virtual .js id so the
+ * Svelte module plugin (which runs with enforce: 'post') won't re-process it.
+ */
+function layerchartRunesPlugin() {
+  const QUERY = '?layerchart-compiled';
+  return {
+    name: 'layerchart-runes',
+    enforce: 'pre',
+    resolveId(id, importer) {
+      if (!id.endsWith('.svelte.js') || id.includes('?')) return;
+      let resolvedPath = id;
+      if (importer) {
+        const importerPath = importer.includes(QUERY) ? importer.split(QUERY)[0] : importer;
+        const importerDir = path.dirname(importerPath);
+        resolvedPath = path.resolve(importerDir, id);
+      }
+      if (resolvedPath.includes('layerchart')) {
+        // Real path + query: path exists for dependency resolution, query triggers our load
+        return resolvedPath + QUERY;
+      }
+    },
+    load(id) {
+      if (id.endsWith(QUERY)) {
+        const realPath = id.slice(0, -QUERY.length);
+        const code = fs.readFileSync(realPath, 'utf-8');
+        const result = compileModule(code, {
+          filename: realPath,
+          generate: 'client',
+        });
+        return result.js.code;
+      }
+    },
+  };
+}
 
 // Custom plugin to import CSS as text
 function cssAsText() {
@@ -25,7 +65,7 @@ function cssAsText() {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [sveltekit(), cssAsText()],
+  plugins: [layerchartRunesPlugin(), sveltekit(), cssAsText()],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
