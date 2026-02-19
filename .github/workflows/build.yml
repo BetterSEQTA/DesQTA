@@ -16,10 +16,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'pnpm'
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -28,13 +34,13 @@ jobs:
         run: npm install -g @tauri-apps/cli
 
       - name: Install dependencies
-        run: npm i
+        run: pnpm install
 
       - name: Build desktop app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: npm run tauri build
+        run: pnpm tauri build
 
       - name: Upload desktop build artifacts
         uses: actions/upload-artifact@v4
@@ -48,10 +54,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'pnpm'
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -99,7 +111,7 @@ jobs:
         run: npm install -g @tauri-apps/cli
 
       - name: Install dependencies
-        run: npm i
+        run: pnpm install
 
       - name: Accept Android licenses
         run: |
@@ -149,7 +161,7 @@ jobs:
         run: |
           echo "Building with JAVA_HOME: $JAVA_HOME"
           echo "Building with GRADLE_OPTS: $GRADLE_OPTS"
-          JAVA_HOME=$JAVA_HOME GRADLE_OPTS="-Dorg.gradle.java.home=$JAVA_HOME -Xmx4g -XX:+HeapDumpOnOutOfMemoryError" npm run tauri android build
+          JAVA_HOME=$JAVA_HOME GRADLE_OPTS="-Dorg.gradle.java.home=$JAVA_HOME -Xmx4g -XX:+HeapDumpOnOutOfMemoryError" pnpm tauri android build
 
       - name: Zip Android build outputs
         run: |
