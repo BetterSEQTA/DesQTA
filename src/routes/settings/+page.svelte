@@ -18,6 +18,7 @@
     Moon,
     ComputerDesktop,
     CloudArrowUp,
+    CloudArrowDown,
     Cog,
     Squares2x2,
     User,
@@ -1078,106 +1079,90 @@ The Company reserves the right to terminate your access to the Service at any ti
             {#if cloudUser}
               <!-- Logged in state -->
               <div
-                class="p-4 rounded-lg border border-green-200 bg-green-100/60 dark:bg-green-900/30 animate-fade-in dark:border-green-800">
-                <div class="flex gap-4 items-start">
-                  {#if cloudUser.pfpUrl}
-                    <img
-                      src={getFullPfpUrl(cloudUser.pfpUrl) ||
-                        `https://api.dicebear.com/7.x/thumbs/svg?seed=${cloudUser.id}`}
-                      alt={cloudUser.displayName || cloudUser.username}
-                      class="object-cover w-12 h-12 rounded-full border-2 border-green-300 dark:border-green-700" />
-                  {:else}
-                    <img
-                      src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${cloudUser.id}`}
-                      alt={cloudUser.displayName || cloudUser.username}
-                      class="object-cover w-12 h-12 rounded-full border-2 border-green-300 dark:border-green-700" />
-                  {/if}
-                  <div class="flex-1">
-                    <div class="flex gap-2 items-center mb-1">
-                      <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span class="text-sm font-semibold text-green-800 dark:text-green-200"
-                        >Logged in to BetterSEQTA Plus</span>
+                class="overflow-hidden rounded-xl border border-zinc-200/80 dark:border-zinc-700/80 bg-linear-to-br from-emerald-50/80 to-white dark:from-emerald-950/20 dark:to-zinc-900/80 shadow-sm animate-fade-in">
+                <div class="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div class="flex gap-4 items-center">
+                    <div class="relative shrink-0">
+                      {#if cloudUser.pfpUrl}
+                        <img
+                          src={getFullPfpUrl(cloudUser.pfpUrl) ||
+                            `https://api.dicebear.com/7.x/thumbs/svg?seed=${cloudUser.id}`}
+                          alt={cloudUser.displayName || cloudUser.username}
+                          class="object-cover w-14 h-14 rounded-full ring-2 ring-emerald-400/50 dark:ring-emerald-500/40" />
+                      {:else}
+                        <img
+                          src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${cloudUser.id}`}
+                          alt={cloudUser.displayName || cloudUser.username}
+                          class="object-cover w-14 h-14 rounded-full ring-2 ring-emerald-400/50 dark:ring-emerald-500/40" />
+                      {/if}
+                      <div
+                        class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900"
+                        title="Connected"></div>
                     </div>
-                    <div class="mb-1 text-sm text-green-700 dark:text-green-300">
-                      <strong>{cloudUser.displayName || cloudUser.username}</strong>
-                    </div>
-                    <div class="mb-3 text-xs text-green-600 dark:text-green-400">
-                      @{cloudUser.username}
+                    <div>
+                      <p class="text-sm font-medium text-zinc-900 dark:text-white">
+                        {cloudUser.displayName || cloudUser.username}
+                      </p>
+                      <p class="text-xs text-zinc-500 dark:text-zinc-400">@{cloudUser.username}</p>
+                      <p class="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        BetterSEQTA Plus
+                      </p>
                     </div>
                   </div>
+                  <button
+                    class="flex gap-2 items-center justify-center px-5 py-2.5 rounded-xl font-medium text-sm text-white transition-all duration-200 accent-bg hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 accent-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    onclick={openCloudSyncModal}
+                    disabled={!acceptedCloudEula}>
+                    <Icon src={CloudArrowUp} class="w-4 h-4" />
+                    Manage
+                  </button>
                 </div>
-                <div class="pt-4 mt-4 border-t border-green-200 dark:border-green-800">
-                  <h4 class="mb-2 text-sm font-semibold text-green-800 dark:text-green-200">
-                    Settings Synchronization
-                  </h4>
-                  <p class="mb-4 text-xs text-green-700 dark:text-green-300">
-                    Upload your current settings to the cloud or download settings from another
-                    device. This includes all your shortcuts, feeds, theme preferences, and other
-                    customizations.
-                  </p>
-                  <div class="flex flex-col gap-3 sm:flex-row">
-                    <button
-                      class="flex gap-2 items-center justify-center px-6 py-3 text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-xs transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                      onclick={openCloudSyncModal}
-                      disabled={!acceptedCloudEula}>
-                      <Icon src={CloudArrowUp} class="w-5 h-5" />
-                      Sync Settings
-                    </button>
-                  </div>
-                </div>
+                <p class="px-5 pb-5 text-xs text-zinc-500 dark:text-zinc-400">Settings sync automatically. Upload or download manually across devices.</p>
               </div>
             {:else}
               <!-- Not logged in state -->
-              <div class="p-4 rounded-lg bg-zinc-200/60 dark:bg-zinc-700/30 animate-fade-in">
-                <div
-                  class="p-3 mb-3 rounded-sm border border-yellow-200 bg-yellow-100/60 dark:bg-yellow-900/30 dark:border-yellow-800">
-                  <div class="flex gap-2 items-center">
-                    <input
-                      id="accept-eula-loggedout"
-                      type="checkbox"
-                      class="w-4 h-4 accent-blue-600"
-                      bind:checked={acceptedCloudEula} />
-                    <label for="accept-eula-loggedout" class="text-sm"
-                      >I have read and accept the Cloud Sync Terms (EULA)</label>
+              <div
+                class="overflow-hidden rounded-xl border border-zinc-200/80 dark:border-zinc-700/80 bg-zinc-50/50 dark:bg-zinc-800/30 animate-fade-in">
+                <div class="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div class="flex gap-4 items-center">
+                    <div
+                      class="flex w-14 h-14 shrink-0 items-center justify-center rounded-full bg-zinc-200/80 dark:bg-zinc-700/80">
+                      <Icon src={CloudArrowUp} class="w-7 h-7 text-zinc-400 dark:text-zinc-500" />
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-zinc-900 dark:text-white">
+                        Sync Settings Across Devices
+                      </p>
+                      <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                        <a
+                          href="https://accounts.betterseqta.org"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="accent-text hover:underline">
+                          Create a free account
+                        </a>
+                        to get started
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div class="flex flex-col gap-4">
-                  <div class="flex gap-3 items-center">
-                    <div class="w-2 h-2 rounded-full bg-zinc-400"></div>
-                    <span class="text-sm font-semibold text-zinc-600 dark:text-zinc-300"
-                      >Not logged in to BetterSEQTA Plus</span>
-                  </div>
-                  <div>
-                    <h3
-                      class="mb-2 text-sm font-semibold sm:text-base text-zinc-500 dark:text-zinc-400">
-                      Settings Synchronization
-                    </h3>
-                    <p class="mb-4 text-xs text-zinc-500 sm:text-sm dark:text-zinc-500">
-                      Upload your current settings to the cloud or download settings from another
-                      device. This includes all your shortcuts, feeds, theme preferences, and other
-                      customizations.
-                    </p>
-                    <p class="mb-4 text-xs text-zinc-500 sm:text-sm dark:text-zinc-500">
-                      <a
-                        href="https://accounts.betterseqta.org"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="text-blue-600 dark:text-blue-500 hover:underline">
-                        Create a free BetterSEQTA Plus account
-                      </a> to get started with cloud syncing.
-                    </p>
-                  </div>
-                  <div class="flex flex-col gap-3 sm:flex-row">
+                  <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <label
+                      class="flex cursor-pointer gap-2 items-center text-xs text-zinc-600 dark:text-zinc-400">
+                      <input
+                        id="accept-eula-loggedout"
+                        type="checkbox"
+                        class="w-4 h-4 rounded accent-blue-600"
+                        bind:checked={acceptedCloudEula} />
+                      Accept EULA
+                    </label>
                     <button
-                      class="flex gap-2 items-center justify-center px-6 py-3 text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                      class="flex gap-2 items-center justify-center px-5 py-2.5 rounded-xl font-medium text-sm text-white transition-all duration-200 accent-bg hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 accent-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                       onclick={openCloudSyncModal}
                       disabled={!acceptedCloudEula}>
-                      <Icon src={CloudArrowUp} class="w-5 h-5" />
-                      Login & Sync Settings
+                      <Icon src={CloudArrowUp} class="w-4 h-4" />
+                      Login & Sync
                     </button>
-                    <div class="text-xs text-zinc-500 dark:text-zinc-500 sm:self-center">
-                      Requires BetterSEQTA Plus account
-                    </div>
                   </div>
                 </div>
               </div>
