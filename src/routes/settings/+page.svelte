@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
-  import { notify } from '../../utils/notify';
   import {
     accentColor,
     loadAccentColor,
@@ -527,10 +526,6 @@ The Company reserves the right to terminate your access to the Service at any ti
       alert('Reminders are currently disabled. Enable them to receive notifications.');
       return;
     }
-    await notify({
-      title: 'Test Notification',
-      body: 'This is a test notification from DesQTA settings.',
-    });
     toastStore.success('Test notification sent');
   }
 
@@ -546,24 +541,15 @@ The Company reserves the right to terminate your access to the Service at any ti
 
   async function testFeed(url: string) {
     if (!url) {
-      notify({
-        title: 'Invalid Feed URL',
-        body: 'Please enter a valid RSS feed URL',
-      });
+      toastStore.error('Please enter a valid RSS feed URL');
       return;
     }
 
     try {
       const result = await invoke('get_rss_feed', { feed: url });
-      notify({
-        title: 'Feed Test Successful',
-        body: 'The RSS feed is valid and can be added',
-      });
+      toastStore.success('The RSS feed is valid and can be added');
     } catch (error) {
-      notify({
-        title: 'Feed Test Failed',
-        body: 'Could not fetch the RSS feed. Please check the URL and try again.',
-      });
+      toastStore.error('Could not fetch the RSS feed. Please check the URL and try again.');
     }
   }
 
@@ -780,24 +766,12 @@ The Company reserves the right to terminate your access to the Service at any ti
         updateNotes = update.body || 'Bug fixes and improvements';
 
         toastStore.info(`Update available: Version ${update.version}`);
-        notify({
-          title: 'Update Available',
-          body: `Version ${update.version} is available! Click "Install Update" to download and install.`,
-        });
       } else {
         toastStore.success('You are running the latest version');
-        notify({
-          title: 'Up to Date',
-          body: 'You are running the latest version of DesQTA.',
-        });
       }
     } catch (error) {
       logger.error('settings', 'checkForUpdates', 'Failed to check for updates', { error });
       toastStore.error('Failed to check for updates');
-      notify({
-        title: 'Update Check Failed',
-        body: 'Unable to check for updates. Please try again later.',
-      });
     } finally {
       checkingUpdates = false;
     }
@@ -810,18 +784,10 @@ The Company reserves the right to terminate your access to the Service at any ti
       if (update?.available) {
         await update.downloadAndInstall();
         toastStore.success('Update downloaded. Restart to install');
-        notify({
-          title: 'Update Downloaded',
-          body: 'The update will be installed when you restart the application.',
-        });
       }
     } catch (error) {
       logger.error('settings', 'installUpdate', 'Failed to install update', { error });
       toastStore.error('Failed to install update');
-      notify({
-        title: 'Update Installation Failed',
-        body: 'Unable to install the update. Please try again later.',
-      });
     }
   }
 
@@ -845,10 +811,7 @@ The Company reserves the right to terminate your access to the Service at any ti
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      notify({
-        title: 'File Too Large',
-        body: 'Please select an image smaller than 10MB.',
-      });
+      toastStore.error('Please select an image smaller than 10MB.');
       return;
     }
 
@@ -868,17 +831,10 @@ The Company reserves the right to terminate your access to the Service at any ti
       await invoke('save_profile_picture', { base64Data: croppedBase64 });
       customProfilePicture = croppedBase64;
       toastStore.success('Profile picture updated successfully');
-      notify({
-        title: 'Profile Picture Updated',
-        body: 'Your profile picture has been updated.',
-      });
       setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
       console.error('Failed to save profile picture:', error);
-      notify({
-        title: 'Save Failed',
-        body: 'Failed to save profile picture. Please try again.',
-      });
+      toastStore.error('Failed to save profile picture. Please try again.');
     } finally {
       uploading = false;
     }
@@ -897,11 +853,6 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       toastStore.success('Profile picture removed successfully');
 
-      notify({
-        title: 'Profile Picture Removed',
-        body: 'Your custom profile picture has been removed.',
-      });
-
       // Refresh the page to update the header
       setTimeout(() => {
         window.location.reload();
@@ -909,10 +860,6 @@ The Company reserves the right to terminate your access to the Service at any ti
     } catch (error) {
       console.error('Failed to remove profile picture:', error);
       toastStore.error('Failed to remove profile picture');
-      notify({
-        title: 'Removal Failed',
-        body: 'Failed to remove profile picture. Please try again.',
-      });
     }
   }
 
@@ -940,10 +887,6 @@ The Company reserves the right to terminate your access to the Service at any ti
       } catch (saveError) {
         console.error('Failed to save performance results:', saveError);
         toastStore.warning('Test completed but failed to save results');
-        notify({
-          title: 'Save Failed',
-          body: 'Performance test completed but failed to save results. Showing results anyway.',
-        });
 
         // Still show results even if save failed
         sessionStorage.setItem('performance-test-results', JSON.stringify(results));
@@ -975,16 +918,10 @@ The Company reserves the right to terminate your access to the Service at any ti
 
         await invoke('save_performance_test_results', { results: errorResults });
 
-        notify({
-          title: 'Performance Test Failed',
-          body: 'Test failed but error report has been saved to AppData.',
-        });
+        toastStore.error('Performance test failed but error report has been saved.');
       } catch (saveError) {
         console.error('Failed to save error report:', saveError);
-        notify({
-          title: 'Performance Test Failed',
-          body: 'Test failed and could not save error report.',
-        });
+        toastStore.error('Performance test failed and could not save error report.');
       }
     } finally {
       performanceTestRunning = false;
@@ -997,17 +934,9 @@ The Company reserves the right to terminate your access to the Service at any ti
       await invoke('open_url', { url: `file://${performanceDir}` });
 
       toastStore.success('Performance tests folder opened');
-      notify({
-        title: 'Performance Tests Folder',
-        body: 'Opened the folder containing all saved performance test results.',
-      });
     } catch (error) {
       console.error('Failed to open performance tests folder:', error);
       toastStore.error('Failed to open performance tests folder');
-      notify({
-        title: 'Error',
-        body: 'Failed to open performance tests folder.',
-      });
     }
   }
 
