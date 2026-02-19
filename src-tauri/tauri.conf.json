@@ -20,6 +20,7 @@
         "decorations": false,
         "center": true,
         "visible": true,
+        "focus": true,
         "transparent": true,
         "shadow": false
       }

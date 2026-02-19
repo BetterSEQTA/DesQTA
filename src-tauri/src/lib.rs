@@ -735,6 +735,20 @@ pub fn run() {
                     .expect("Error while setting up tray menu");
             }
 
+            // Bring main window to front on startup (fixes installer/updater launch where window
+            // opens behind other windows). Short delay helps when launched by another process.
+            #[cfg(desktop)]
+            {
+                let app_handle = app.app_handle().clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(300));
+                    if let Some(window) = app_handle.webview_windows().get("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                });
+            }
+
             Ok(())
         })
         .on_window_event(|window, event| {
