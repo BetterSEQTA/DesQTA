@@ -14,6 +14,8 @@
     ChatBubbleLeftRight,
     ClipboardDocumentList,
     DocumentText,
+    CloudArrowUp,
+    NoSymbol,
   } from 'svelte-hero-icons';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
@@ -29,6 +31,7 @@
     questionnaireService,
     type QuestionnaireQuestion,
   } from '../services/questionnaireService';
+  import { cloudUserStore } from '../services/cloudAuthService';
   import { _ } from '../i18n';
   import T from './T.svelte';
 
@@ -170,6 +173,7 @@
   let showNotificationsModal = $state(false);
   let showQuestionnaireModal = $state(false);
   let currentQuestion = $state<QuestionnaireQuestion | null>(null);
+  let showCloudSignOutInfo = $state(false);
 
   function handleSelect(page: { nameKey: string; path: string }) {
     searchStore.set('');
@@ -445,11 +449,14 @@
     checkMobile();
     window.addEventListener('resize', checkMobile);
 
-    // Add click outside handler for notifications
+    // Add click outside handler for notifications and cloud sign-out info
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (showNotifications && !target.closest('.notification-dropdown')) {
         showNotifications = false;
+      }
+      if (showCloudSignOutInfo && !target.closest('.cloud-status-dropdown')) {
+        showCloudSignOutInfo = false;
       }
     };
 
@@ -525,6 +532,48 @@
         {onClickOutside}
         {disableSchoolPicture} />
     {/if}
+
+    <!-- Cloud sync status indicator -->
+    <div class="relative cloud-status-dropdown">
+      {#if $cloudUserStore}
+        <a
+          href="/settings"
+          class="flex relative justify-center items-center rounded-xl border transition-all duration-200 ease-in-out transform size-12 bg-white/60 border-zinc-200/40 hover:accent-bg dark:bg-zinc-800/60 dark:border-zinc-700/40 focus:outline-hidden focus:ring-2 accent-ring hover:scale-105 active:scale-95 playful"
+          aria-label={$_('header.cloud_signed_in', { default: 'Signed in to BetterSEQTA Plus' })}>
+          <Icon src={CloudArrowUp} class="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+        </a>
+      {:else}
+        <button
+          type="button"
+          class="flex relative justify-center items-center rounded-xl border transition-all duration-200 ease-in-out transform size-12 bg-white/60 border-zinc-200/40 hover:accent-bg dark:bg-zinc-800/60 dark:border-zinc-700/40 focus:outline-hidden focus:ring-2 accent-ring hover:scale-105 active:scale-95 playful"
+          aria-label={$_('header.cloud_not_signed_in', { default: 'Not signed in to BetterSEQTA Plus' })}
+          onclick={() => (showCloudSignOutInfo = !showCloudSignOutInfo)}>
+          <span class="relative inline-flex justify-center items-center">
+            <Icon src={CloudArrowUp} class="w-5 h-5 text-zinc-400 dark:text-zinc-500" />
+            <Icon
+              src={NoSymbol}
+              class="absolute w-4 h-4 text-red-500 dark:text-red-400 pointer-events-none"
+              aria-hidden="true" />
+          </span>
+        </button>
+        {#if showCloudSignOutInfo}
+          <div
+            class="absolute right-0 z-50 mt-2 w-72 rounded-xl border shadow-2xl backdrop-blur-xl bg-white/95 dark:bg-zinc-900/95 border-zinc-200/60 dark:border-zinc-700/60 p-4"
+            transition:fly={{ y: -8, duration: 200, opacity: 0, easing: (t) => t * (2 - t) }}
+            style="transform-origin: top right;">
+            <p class="text-sm text-zinc-700 dark:text-zinc-300 mb-4">
+              <T key="header.cloud_signed_out_message" fallback="You're signed out of BetterSEQTA Plus. Sign in via Settings to sync your data across devices." />
+            </p>
+            <a
+              href="/settings"
+              class="flex justify-center items-center gap-2 w-full px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-200 accent-bg hover:scale-[1.02] active:scale-95"
+              onclick={() => (showCloudSignOutInfo = false)}>
+              <T key="header.cloud_go_to_settings" fallback="Go to Settings" />
+            </a>
+          </div>
+        {/if}
+      {/if}
+    </div>
 
     <div class="relative notification-dropdown">
       <button

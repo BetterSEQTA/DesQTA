@@ -122,7 +122,11 @@
     "minimize": "Minimizar",
     "maximize": "Maximizar",
     "close": "Fechar",
-    "notifications": "Notificações"
+    "notifications": "Notificações",
+    "cloud_signed_in": "Conectado ao BetterSEQTA Plus",
+    "cloud_not_signed_in": "Não conectado ao BetterSEQTA Plus",
+    "cloud_signed_out_message": "Você saiu do BetterSEQTA Plus. Entre nas Configurações para sincronizar seus dados entre dispositivos.",
+    "cloud_go_to_settings": "Ir para Configurações"
   },
   "login": {
     "welcome_to": "Bem-vindo ao",

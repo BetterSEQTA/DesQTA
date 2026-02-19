@@ -1097,14 +1097,16 @@ The Company reserves the right to terminate your access to the Service at any ti
                       {/if}
                       <div
                         class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900"
-                        title="Connected"></div>
+                        title="Connected">
+                      </div>
                     </div>
                     <div>
                       <p class="text-sm font-medium text-zinc-900 dark:text-white">
                         {cloudUser.displayName || cloudUser.username}
                       </p>
                       <p class="text-xs text-zinc-500 dark:text-zinc-400">@{cloudUser.username}</p>
-                      <p class="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                      <p
+                        class="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                         BetterSEQTA Plus
                       </p>
@@ -1118,7 +1120,9 @@ The Company reserves the right to terminate your access to the Service at any ti
                     Manage
                   </button>
                 </div>
-                <p class="px-5 pb-5 text-xs text-zinc-500 dark:text-zinc-400">Settings sync automatically. Upload or download manually across devices.</p>
+                <p class="px-5 pb-5 text-xs text-zinc-500 dark:text-zinc-400">
+                  Settings sync automatically. Upload or download manually across devices.
+                </p>
               </div>
             {:else}
               <!-- Not logged in state -->

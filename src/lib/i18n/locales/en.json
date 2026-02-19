@@ -215,7 +215,11 @@
     "minimize": "Minimize",
     "maximize": "Maximize",
     "close": "Close",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "cloud_signed_in": "Signed in to BetterSEQTA Plus",
+    "cloud_not_signed_in": "Not signed in to BetterSEQTA Plus",
+    "cloud_signed_out_message": "You're signed out of BetterSEQTA Plus. Sign in via Settings to sync your data across devices.",
+    "cloud_go_to_settings": "Go to Settings"
   },
   "login": {
     "welcome_to": "Welcome to",

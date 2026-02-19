@@ -122,7 +122,11 @@
     "minimize": "تصغير",
     "maximize": "تكبير",
     "close": "إغلاق",
-    "notifications": "الإشعارات"
+    "notifications": "الإشعارات",
+    "cloud_signed_in": "تم تسجيل الدخول إلى BetterSEQTA Plus",
+    "cloud_not_signed_in": "لم يتم تسجيل الدخول إلى BetterSEQTA Plus",
+    "cloud_signed_out_message": "تم تسجيل خروجك من BetterSEQTA Plus. سجّل الدخول عبر الإعدادات لمزامنة بياناتك عبر الأجهزة.",
+    "cloud_go_to_settings": "الذهاب إلى الإعدادات"
   },
   "login": {
     "welcome_to": "مرحباً بك في",

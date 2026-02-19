@@ -330,6 +330,8 @@ pub fn run() {
             settings::save_cloud_token,
             settings::get_cloud_user,
             settings::clear_cloud_token,
+            settings::get_cloud_state,
+            settings::set_cloud_state_previously_signed,
             settings::get_reserved_client,
             settings::clear_reserved_client,
             settings::save_reserved_client,

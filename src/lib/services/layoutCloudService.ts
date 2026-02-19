@@ -122,6 +122,28 @@ export async function autoDownloadSettingsFromCloud(): Promise<void> {
 /**
  * Sync cloud settings on app startup when user is logged in.
  */
+/**
+ * Check if user was previously signed into cloud but is now signed out (e.g. token expired).
+ * If so, show a toast and clear the flag.
+ */
+export async function checkCloudSignOutAlert(): Promise<void> {
+  try {
+    const cloudUser = await cloudAuthService.getUser();
+    if (cloudUser) return; // Still signed in
+
+    const state = await invoke<{ previously_signed_into_cloud: boolean }>('get_cloud_state');
+    if (!state?.previously_signed_into_cloud) return;
+
+    const { toastStore } = await import('$lib/stores/toast');
+    toastStore.warning(
+      'You have been signed out of BetterSEQTA Plus. Sign in again in Settings to sync your data.',
+    );
+    await invoke('set_cloud_state_previously_signed', { value: false });
+  } catch (e) {
+    logger.debug('layoutCloud', 'checkCloudSignOutAlert', 'Check failed (non-critical)', { error: e });
+  }
+}
+
 export async function syncCloudSettings(options: {
   loadWeatherSettings: () => Promise<void>;
   loadEnhancedAnimationsSetting: () => Promise<void>;
@@ -129,7 +151,10 @@ export async function syncCloudSettings(options: {
 }): Promise<void> {
   try {
     const cloudUser = await cloudAuthService.init();
-    if (!cloudUser) return;
+    if (!cloudUser) {
+      await checkCloudSignOutAlert();
+      return;
+    }
 
     logger.info('layoutCloud', 'syncCloudSettings', 'Cloud user found, fetching settings');
     const settings = await cloudSettingsService.getSettings();

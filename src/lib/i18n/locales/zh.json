@@ -122,7 +122,11 @@
     "minimize": "最小化",
     "maximize": "最大化",
     "close": "关闭",
-    "notifications": "通知"
+    "notifications": "通知",
+    "cloud_signed_in": "已登录 BetterSEQTA Plus",
+    "cloud_not_signed_in": "未登录 BetterSEQTA Plus",
+    "cloud_signed_out_message": "您已退出 BetterSEQTA Plus。请在设置中登录以在设备间同步数据。",
+    "cloud_go_to_settings": "前往设置"
   },
   "login": {
     "welcome_to": "欢迎使用",

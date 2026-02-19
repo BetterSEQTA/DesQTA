@@ -122,7 +122,11 @@
     "minimize": "Küçült",
     "maximize": "Büyüt",
     "close": "Kapat",
-    "notifications": "Bildirimler"
+    "notifications": "Bildirimler",
+    "cloud_signed_in": "BetterSEQTA Plus'a giriş yapıldı",
+    "cloud_not_signed_in": "BetterSEQTA Plus'a giriş yapılmadı",
+    "cloud_signed_out_message": "BetterSEQTA Plus'tan çıkış yaptınız. Verilerinizi cihazlar arasında senkronize etmek için Ayarlar'dan giriş yapın.",
+    "cloud_go_to_settings": "Ayarlara git"
   },
   "login": {
     "welcome_to": "Hoş geldiniz",

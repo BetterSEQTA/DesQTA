@@ -33,6 +33,18 @@ fn cloud_token_file() -> PathBuf {
     dir
 }
 
+/// Per-profile storage for cloud sign-in state (separate from settings).
+/// Used to detect when user was previously signed in but got signed out (e.g. token expiry).
+fn cloud_state_file() -> PathBuf {
+    let mut dir = profiles::get_profile_dir(
+        &profiles::ProfileManager::get_current_profile()
+            .map(|p| p.id)
+            .unwrap_or_else(|| "default".to_string()),
+    );
+    dir.push("cloud_state.json");
+    dir
+}
+
 /// Per-profile storage for DesQTA reserved client ID.
 fn reserved_client_file() -> PathBuf {
     let mut dir = profiles::get_profile_dir(
@@ -52,6 +64,34 @@ pub struct CloudToken {
     pub user: Option<CloudUser>,
     #[serde(default)]
     pub base_url: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct CloudState {
+    #[serde(default)]
+    pub previously_signed_into_cloud: bool,
+}
+
+impl CloudState {
+    pub fn load() -> Self {
+        let path = cloud_state_file();
+        if let Ok(mut file) = fs::File::open(path) {
+            let mut contents = String::new();
+            if file.read_to_string(&mut contents).is_ok() {
+                if let Ok(state) = serde_json::from_str::<CloudState>(&contents) {
+                    return state;
+                }
+            }
+        }
+        CloudState::default()
+    }
+    pub fn save(&self) -> io::Result<()> {
+        let path = cloud_state_file();
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, serde_json::to_string(self).unwrap())
+    }
 }
 
 impl CloudToken {
@@ -762,6 +802,10 @@ pub async fn save_cloud_token(
     cloud_token.user = Some(user.clone());
     // This uses cloud_token_file(), which saves to the correct Android folder on Android
     cloud_token.save().map_err(|e| e.to_string())?;
+    // Mark that user has signed into cloud (for sign-out detection)
+    let mut state = CloudState::load();
+    state.previously_signed_into_cloud = true;
+    let _ = state.save();
     Ok(user)
 }
 
@@ -777,7 +821,24 @@ pub fn get_cloud_user() -> CloudUserWithToken {
 
 #[tauri::command]
 pub fn clear_cloud_token() -> Result<(), String> {
-    CloudToken::clear_file().map_err(|e| e.to_string())
+    CloudToken::clear_file().map_err(|e| e.to_string())?;
+    // Clear previously-signed flag on explicit logout
+    let mut state = CloudState::load();
+    state.previously_signed_into_cloud = false;
+    state.save().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_cloud_state() -> CloudState {
+    CloudState::load()
+}
+
+#[tauri::command]
+pub fn set_cloud_state_previously_signed(value: bool) -> Result<(), String> {
+    let mut state = CloudState::load();
+    state.previously_signed_into_cloud = value;
+    state.save().map_err(|e| e.to_string())
 }
 
 #[tauri::command]

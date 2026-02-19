@@ -122,7 +122,11 @@
     "minimize": "Minimalizuj",
     "maximize": "Maksymalizuj",
     "close": "Zamknij",
-    "notifications": "Powiadomienia"
+    "notifications": "Powiadomienia",
+    "cloud_signed_in": "Zalogowano do BetterSEQTA Plus",
+    "cloud_not_signed_in": "Niezalogowano do BetterSEQTA Plus",
+    "cloud_signed_out_message": "Wylogowano z BetterSEQTA Plus. Zaloguj się w Ustawieniach, aby synchronizować dane między urządzeniami.",
+    "cloud_go_to_settings": "Przejdź do ustawień"
   },
   "login": {
     "welcome_to": "Witaj w",

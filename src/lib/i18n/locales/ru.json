@@ -122,7 +122,11 @@
     "minimize": "Свернуть",
     "maximize": "Развернуть",
     "close": "Закрыть",
-    "notifications": "Уведомления"
+    "notifications": "Уведомления",
+    "cloud_signed_in": "Вход в BetterSEQTA Plus выполнен",
+    "cloud_not_signed_in": "Не выполнен вход в BetterSEQTA Plus",
+    "cloud_signed_out_message": "Вы вышли из BetterSEQTA Plus. Войдите в Настройках для синхронизации данных между устройствами.",
+    "cloud_go_to_settings": "Перейти в настройки"
   },
   "login": {
     "welcome_to": "Добро пожаловать в",

@@ -121,7 +121,12 @@
     "toggle_sidebar": "Toggle the ship's panel",
     "minimize": "Lower the colors",
     "maximize": "Hoist full sail",
-    "close": "Abandon ship"
+    "close": "Abandon ship",
+    "notifications": "Ship's Bells",
+    "cloud_signed_in": "Signed into BetterSEQTA Plus",
+    "cloud_not_signed_in": "Not signed into BetterSEQTA Plus",
+    "cloud_signed_out_message": "Ye've been signed out of BetterSEQTA Plus. Sign in via Settings to sync yer treasure across devices.",
+    "cloud_go_to_settings": "To the Settings"
   },
   "login": {
     "welcome_to": "Welcome aboard",

@@ -122,7 +122,11 @@
     "minimize": "Minimaliseren",
     "maximize": "Maximaliseren",
     "close": "Sluiten",
-    "notifications": "Meldingen"
+    "notifications": "Meldingen",
+    "cloud_signed_in": "Ingelogd bij BetterSEQTA Plus",
+    "cloud_not_signed_in": "Niet ingelogd bij BetterSEQTA Plus",
+    "cloud_signed_out_message": "Je bent uitgelogd bij BetterSEQTA Plus. Log in via Instellingen om je gegevens tussen apparaten te synchroniseren.",
+    "cloud_go_to_settings": "Naar instellingen"
   },
   "login": {
     "welcome_to": "Welkom bij",

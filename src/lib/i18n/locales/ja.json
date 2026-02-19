@@ -122,7 +122,11 @@
     "minimize": "最小化",
     "maximize": "最大化",
     "close": "閉じる",
-    "notifications": "通知"
+    "notifications": "通知",
+    "cloud_signed_in": "BetterSEQTA Plusにサインイン中",
+    "cloud_not_signed_in": "BetterSEQTA Plusにサインインしていません",
+    "cloud_signed_out_message": "BetterSEQTA Plusからサインアウトしました。設定でサインインしてデバイス間でデータを同期してください。",
+    "cloud_go_to_settings": "設定へ"
   },
   "login": {
     "welcome_to": "ようこそ",

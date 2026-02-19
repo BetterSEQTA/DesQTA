@@ -122,7 +122,11 @@
     "minimize": "Réduire",
     "maximize": "Agrandir",
     "close": "Fermer",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "cloud_signed_in": "Connecté à BetterSEQTA Plus",
+    "cloud_not_signed_in": "Non connecté à BetterSEQTA Plus",
+    "cloud_signed_out_message": "Vous êtes déconnecté de BetterSEQTA Plus. Connectez-vous dans les Paramètres pour synchroniser vos données entre appareils.",
+    "cloud_go_to_settings": "Aller aux paramètres"
   },
   "login": {
     "welcome_to": "Bienvenue sur",
