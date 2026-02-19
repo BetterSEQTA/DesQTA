@@ -59,6 +59,7 @@
   import { CacheManager } from '../../utils/cacheManager';
   import { performanceTester, type TestResults } from '../../lib/services/performanceTesting';
   import Modal from '../../lib/components/Modal.svelte';
+  import ProfilePictureCropModal from '../../lib/components/ProfilePictureCropModal.svelte';
 
   interface Shortcut {
     name: string;
@@ -216,6 +217,8 @@ The Company reserves the right to terminate your access to the Service at any ti
   let customProfilePicture = $state<string | null>(null);
   let uploading = $state(false);
   let fileInput: HTMLInputElement;
+  let showCropModal = $state(false);
+  let cropImageSrc = $state<string | null>(null);
 
   async function loadCloudUser() {
     cloudUserLoading = true;
@@ -833,14 +836,14 @@ The Company reserves the right to terminate your access to the Service at any ti
     }
   }
 
-  // Handle profile picture upload
-  async function handleProfilePictureUpload(event: Event) {
+  // Handle profile picture upload - opens crop dialog
+  function handleProfilePictureUpload(event: Event) {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
 
     if (!file) return;
 
-    // Validate file size (max 5MB)
+    // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       notify({
         title: 'File Too Large',
@@ -849,38 +852,41 @@ The Company reserves the right to terminate your access to the Service at any ti
       return;
     }
 
+    const reader = new FileReader();
+    reader.onload = () => {
+      cropImageSrc = reader.result as string;
+      showCropModal = true;
+    };
+    reader.readAsDataURL(file);
+    if (target) target.value = '';
+  }
+
+  // Save cropped profile picture (from crop modal)
+  async function handleCropSave(croppedBase64: string) {
     uploading = true;
-
     try {
-      // Convert file to base64
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-      // Save to backend
-      await invoke('save_profile_picture', { base64Data: base64 });
-
-      // Update local state
-      customProfilePicture = base64;
-
-      // Refresh the page to update the header
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    } catch (error) {
-      console.error('Failed to upload profile picture:', error);
+      await invoke('save_profile_picture', { base64Data: croppedBase64 });
+      customProfilePicture = croppedBase64;
+      toastStore.success('Profile picture updated successfully');
       notify({
-        title: 'Upload Failed',
+        title: 'Profile Picture Updated',
+        body: 'Your profile picture has been updated.',
+      });
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (error) {
+      console.error('Failed to save profile picture:', error);
+      notify({
+        title: 'Save Failed',
         body: 'Failed to save profile picture. Please try again.',
       });
     } finally {
       uploading = false;
-      // Clear the input
-      if (target) target.value = '';
     }
+  }
+
+  function closeCropModal() {
+    showCropModal = false;
+    cropImageSrc = null;
   }
 
   // Remove profile picture
@@ -1067,6 +1073,12 @@ The Company reserves the right to terminate your access to the Service at any ti
       </div>
     </div>
   </div>
+
+  <ProfilePictureCropModal
+    open={showCropModal}
+    imageSrc={cropImageSrc}
+    onsave={handleCropSave}
+    oncancel={closeCropModal} />
 
   {#if loading}
     <div class="flex justify-center items-center py-12 animate-fade-in">

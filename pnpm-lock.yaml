@@ -152,6 +152,9 @@ importers:
       sortablejs:
         specifier: ^1.15.6
         version: 1.15.6
+      svelte-easy-crop:
+        specifier: ^5.0.0
+        version: 5.0.0(svelte@5.43.3)
       svelte-i18n:
         specifier: ^4.0.1
         version: 4.0.1(svelte@5.43.3)
@@ -2130,6 +2133,11 @@ packages:
       svelte: ^4.0.0 || ^5.0.0-next.0
       typescript: '>=5.0.0'
 
+  svelte-easy-crop@5.0.0:
+    resolution: {integrity: sha512-niWtner+qYVas6ypIOQ277NKNACVz9qz6wfpEW7t+x5Lhv6nOjpv3S1WhEPO+SnDaW3VZv+0bmm6jVDHK2GMAg==}
+    peerDependencies:
+      svelte: ^5.0.0
+
   svelte-hero-icons@5.2.0:
     resolution: {integrity: sha512-KpdMTL0bOnkxciEmDXvyVF/R5nrZ1x1uHCSt9gMrrbEd3g5HSIaaDChOutTOfeI+cZ3EJbb+OcBH/lBzJr1aEw==}
     engines: {node: '>=18.0.0'}
@@ -4090,6 +4098,10 @@ snapshots:
       typescript: 5.6.3
     transitivePeerDependencies:
       - picomatch
+
+  svelte-easy-crop@5.0.0(svelte@5.43.3):
+    dependencies:
+      svelte: 5.43.3
 
   svelte-hero-icons@5.2.0(svelte@5.43.3):
     dependencies:
