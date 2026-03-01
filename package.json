@@ -54,7 +54,7 @@
     "html5-qrcode": "^2.3.8",
     "ics": "^3.8.1",
     "js-base64": "^3.7.7",
-    "jspdf": "^4.0.0",
+    "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.2",
     "jsqr": "^1.4.0",
     "marked": "^15.0.12",
