@@ -1,11 +1,12 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Result, Context};
 use reqwest::Client;
 use reqwest::{self, RequestBuilder};
 use rss::Channel;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::{fs, io::Cursor, io::Read, sync::OnceLock, time::Duration};
+use std::{fs, io::Cursor, io::Read, sync::OnceLock, time::Duration, path::PathBuf};
+use std::{io::Error, io::ErrorKind};
 use url::form_urlencoded;
 use url::Url;
 use xmltree::{Element, XMLNode};
@@ -15,6 +16,9 @@ use base64::{engine::general_purpose, Engine as _};
 
 use crate::logger;
 use crate::session;
+
+type Patches = HashMap<String, Value>;
+const NOT_MODIFIED: &str = "Not modified";
 
 static GLOBAL_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 
@@ -73,6 +77,143 @@ pub fn create_client() -> &'static reqwest::Client {
             .build()
             .expect("Failed to create HTTP client")
     })
+}
+
+fn patches_file() -> PathBuf {
+    let mut dir = dirs_next::data_dir().expect("Unable to determine data dir");
+    dir.push("DesQTA");
+    dir.push("dev");
+    dir.push("requestPatches.json");
+    dir
+}
+
+fn ensure_patches_dir() -> Result<()> {
+    if let Some(parent) = patches_file().parent() {
+        fs::create_dir_all(parent)?;
+    }
+    Ok(())
+}
+
+fn read_patches() -> Result<Patches> {
+    let path = patches_file();
+
+    let contents = match fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(e) if e.kind() == ErrorKind::NotFound => return Ok(HashMap::new()),
+        Err(e) => return Err(e).context("failed to read requestPatches.json"),
+    };
+
+    serde_json::from_str(&contents)
+        .context("requestPatches.json contained invalid JSON")
+}
+
+fn write_patches(patches: &Patches) -> Result<()> {
+    ensure_patches_dir()?;
+    let path = patches_file();
+    let tmp = path.with_extension("tmp");
+
+    let json = serde_json::to_string_pretty(patches)?;
+    fs::write(&tmp, json)?;
+    fs::rename(tmp, path)?;
+    Ok(())
+}
+
+fn remove_patch(request_id: &str) -> Result<()> {
+    let mut patches = read_patches()?;
+    patches.remove(request_id);
+    write_patches(&patches)
+}
+
+fn append_patch(
+    patch_key: impl Into<String>,
+    patch: Value,
+) -> Result<()> {
+    let mut patches = read_patches()?;
+
+    patches.insert(patch_key.into(), patch);
+
+    write_patches(&patches)
+}
+
+/// Recursively replaces every leaf value (anything that is not a JSON object)
+/// with the NOT_MODIFIED sentinel, preserving all keys and nesting structure.
+/// Arrays are treated as opaque leaves — their contents are not walked.
+fn to_skeleton(val: &Value) -> Value {
+    match val {
+        Value::Object(map) => {
+            let mut out = serde_json::Map::new();
+            for (k, v) in map {
+                out.insert(k.clone(), to_skeleton(v));
+            }
+            Value::Object(out)
+        }
+        _ => Value::String(NOT_MODIFIED.to_string()),
+    }
+}
+
+/// Merges keys from `incoming` into `existing` using the NOT_MODIFIED pattern:
+/// - Keys absent from `existing` are inserted as to_skeleton(incoming_value).
+/// - Keys already present are NEVER touched (preserves user overrides).
+/// - Recurses into nested object pairs so inner keys follow the same rules.
+fn merge_skeleton(existing: &mut Value, incoming: &Value) {
+    match (existing, incoming) {
+        (Value::Object(ex_map), Value::Object(in_map)) => {
+            for (k, in_val) in in_map {
+                if let Some(ex_val) = ex_map.get_mut(k) {
+                    if ex_val.is_object() && in_val.is_object() {
+                        merge_skeleton(ex_val, in_val);
+                    }
+                    // Otherwise leave existing value completely alone
+                } else {
+                    ex_map.insert(k.clone(), to_skeleton(in_val));
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Walks `patch` and writes every value that is NOT the NOT_MODIFIED sentinel
+/// into the corresponding position in `target`. Recurses into nested objects.
+fn apply_overrides(patch: &Value, target: &mut Value) {
+    match (patch, target) {
+        (Value::Object(patch_map), Value::Object(target_map)) => {
+            for (k, patch_val) in patch_map {
+                if patch_val.as_str() == Some(NOT_MODIFIED) {
+                    continue;
+                }
+                match patch_val {
+                    Value::Object(_) => {
+                        let child = target_map.entry(k.clone()).or_insert_with(|| json!({}));
+                        apply_overrides(patch_val, child);
+                    }
+                    _ => {
+                        target_map.insert(k.clone(), patch_val.clone());
+                    }
+                }
+            }
+        }
+        (patch_val, target) if patch_val.as_str() != Some(NOT_MODIFIED) => {
+            *target = patch_val.clone();
+        }
+        _ => {}
+    }
+}
+
+/// Records a successful text response into the patch file for `full_url`.
+/// Uses merge_skeleton so the first response populates with NOT_MODIFIED leaves
+/// and subsequent calls only add newly-seen keys without touching existing values.
+fn record_response_patch(full_url: &str, response_text: &str) {
+    if let Ok(response_json) = serde_json::from_str::<Value>(response_text) {
+        if let Ok(mut patches) = read_patches() {
+            if let Some(entry) = patches.get_mut(full_url) {
+                if let Some(resp_section) = entry.get_mut("response") {
+                    merge_skeleton(resp_section, &response_json);
+                    let _ = write_patches(&patches);
+                }
+            }
+        }
+    }
 }
 
 async fn append_default_headers(req: RequestBuilder) -> RequestBuilder {
@@ -291,10 +432,101 @@ pub async fn fetch_api_data(
         format!("{}{}", session.base_url.parse::<String>().unwrap(), url)
     };
 
-    // Clone headers and parameters for potential retry
-    let headers_clone = headers.clone();
-    let parameters_clone = parameters.clone();
-    let body_clone = body.clone();
+    // Mutable clones — patch overrides may be applied into these before any request
+    // is sent. The retry loop and re-auth retry both read exclusively from these.
+    let mut headers_clone: Option<HashMap<String, String>> = headers.clone();
+    let mut parameters_clone: Option<HashMap<String, String>> = parameters.clone();
+    let mut body_clone: Option<Value> = body.clone();
+
+    // -------------------------------------------------------------------------
+    // Patch system
+    //
+    // Disk shape:
+    //   {
+    //     "<full_url>": {
+    //       "request":  { <mirrors incoming; every leaf value = NOT_MODIFIED or user override> },
+    //       "response": { <mirrors first JSON response; same sentinel pattern> }
+    //     }
+    //   }
+    //
+    // Request-side rules (runs once, before the retry loop):
+    //   • No entry yet → create with to_skeleton(incoming), empty response object.
+    //   • Entry exists → merge_skeleton to register any newly-seen keys as NOT_MODIFIED.
+    //                    Then apply_overrides to replay non-NOT_MODIFIED values back onto
+    //                    headers_clone / parameters_clone / body_clone.
+    //
+    // Response-side rules (applied after every successful text response):
+    //   • merge_skeleton into entry.response — first response populates it, later ones
+    //     only add new keys. Existing values (user overrides) are never overwritten.
+    // -------------------------------------------------------------------------
+    {
+        let incoming_request = json!({
+            "body":       body_clone.clone().unwrap_or(json!({})),
+            "headers":    headers_clone.clone().unwrap_or_default(),
+            "parameters": parameters_clone.clone().unwrap_or_default(),
+            "method":     format!("{:?}", method),
+            "is_image":   is_image,
+            "return_url": return_url,
+            "parse_html": parse_html.unwrap_or(false)
+        });
+
+        let mut patches = read_patches()
+            .map_err(|e| format!("Failed to read request patches: {}", e))?;
+
+        let entry = patches.entry(full_url.clone()).or_insert_with(|| json!({
+            "request":  to_skeleton(&incoming_request),
+            "response": {}
+        }));
+
+        // Merge any newly-seen request keys (no-op on first call — entry was just created)
+        if let Some(req_section) = entry.get_mut("request") {
+            merge_skeleton(req_section, &incoming_request);
+        }
+
+        // Apply developer overrides back onto the live clones
+        if let Some(req_patch) = entry.get("request").cloned() {
+            // body — may be nested so use recursive apply_overrides
+            if let Some(body_patch) = req_patch.get("body") {
+                if body_patch.as_str() != Some(NOT_MODIFIED) {
+                    let mut current = body_clone.clone().unwrap_or(json!({}));
+                    apply_overrides(body_patch, &mut current);
+                    body_clone = Some(current);
+                }
+            }
+
+            // headers — flat HashMap<String,String>; only plain string values apply
+            if let Some(Value::Object(headers_patch)) = req_patch.get("headers") {
+                let mut h = headers_clone.clone().unwrap_or_default();
+                for (k, v) in headers_patch {
+                    if v.as_str() != Some(NOT_MODIFIED) {
+                        if let Some(s) = v.as_str() {
+                            h.insert(k.clone(), s.to_string());
+                        }
+                    }
+                }
+                headers_clone = Some(h);
+            }
+
+            // parameters — same flat shape
+            if let Some(Value::Object(params_patch)) = req_patch.get("parameters") {
+                let mut p = parameters_clone.clone().unwrap_or_default();
+                for (k, v) in params_patch {
+                    if v.as_str() != Some(NOT_MODIFIED) {
+                        if let Some(s) = v.as_str() {
+                            p.insert(k.clone(), s.to_string());
+                        }
+                    }
+                }
+                parameters_clone = Some(p);
+            }
+
+            // method / is_image / return_url / parse_html are function-level parameters;
+            // they cannot be mutated post-call and are stored for observability only.
+        }
+
+        write_patches(&patches)
+            .map_err(|e| format!("Failed to write request patches: {}", e))?;
+    }
 
     // Retry logic for transient network failures (common on school WiFi)
     let max_retries = 3;
@@ -318,14 +550,16 @@ pub async fn fetch_api_data(
         };
         
         request_to_send = append_default_headers(request_to_send).await;
-        
-        if let Some(headers) = &headers {
-            for (key, value) in headers {
+
+        // was: if let Some(headers) = &headers {
+        if let Some(ref h) = headers_clone {
+            for (key, value) in h {
                 request_to_send = request_to_send.header(key, value);
             }
         }
-        
-        if let Some(params) = &parameters {
+
+        // was: if let Some(params) = &parameters {
+        if let Some(ref params) = parameters_clone {
             request_to_send = request_to_send.query(params);
         }
         
@@ -465,7 +699,7 @@ pub async fn fetch_api_data(
                             
                             // Add body for POST requests if provided
                             if let RequestMethod::POST = method {
-                                let mut final_body = body_clone.unwrap_or_else(|| json!({}));
+                                let mut final_body = body_clone.clone().unwrap_or_else(|| json!({}));
                                 if let Some(body_obj) = final_body.as_object_mut() {
                                     if retry_session.jsessionid.starts_with("eyJ") {
                                         body_obj.insert("jwt".to_string(), json!(retry_session.jsessionid));
@@ -480,6 +714,7 @@ pub async fn fetch_api_data(
                                     let retry_status = retry_resp.status();
                                     if retry_status.is_success() {
                                         let retry_text = retry_resp.text().await.map_err(|e| e.to_string())?;
+                                        record_response_patch(&full_url, &retry_text);
                                         return Ok(retry_text);
                                     } else {
                                         return Err(format!("Request failed after re-authentication: {}", retry_status));
@@ -528,6 +763,7 @@ pub async fn fetch_api_data(
                 }
                 
                 // Return the response text (no auth failure detected)
+                record_response_patch(&full_url, &response_text);
                 return Ok(response_text);
             }
             
@@ -576,6 +812,7 @@ pub async fn fetch_api_data(
             } else {
                 // This should not be reached due to the check above, but keeping for safety
                 let text = resp.text().await.map_err(|e| e.to_string())?;
+                record_response_patch(&full_url, &text);
                 Ok(text)
             };
 
@@ -707,8 +944,6 @@ pub async fn get_seqta_file(file_type: &str, uuid: &str) -> Result<String, Strin
 
 /// Helper function to get file size limit from seqtaConfig.json
 fn get_file_size_limit_from_config() -> Option<u64> {
-    use dirs_next;
-    use std::path::PathBuf;
 
     // Get the config file path
     let config_path = if cfg!(target_os = "android") {
