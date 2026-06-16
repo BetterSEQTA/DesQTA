@@ -46,6 +46,22 @@ export interface WeatherSettings {
   weather_country?: string;
 }
 
+/** Default fallback when city/country are empty (e.g. force fallback location with no input). */
+export const DEFAULT_WEATHER_CITY = 'Adelaide';
+export const DEFAULT_WEATHER_COUNTRY = 'AU';
+
+export function resolveWeatherLocation(city: string, country?: string): {
+  city: string;
+  country: string;
+} {
+  const trimmedCity = city.trim();
+  const trimmedCountry = (country ?? '').trim();
+  return {
+    city: trimmedCity || DEFAULT_WEATHER_CITY,
+    country: trimmedCountry || DEFAULT_WEATHER_COUNTRY,
+  };
+}
+
 export const weatherService = {
   async loadWeatherSettings(): Promise<WeatherSettings> {
     logger.debug('weatherService', 'loadWeatherSettings', 'Loading weather settings');
@@ -55,18 +71,23 @@ export const weatherService = {
       logger.debug('weatherService', 'loadWeatherSettings', 'Weather settings loaded successfully', { 
         enabled: settings?.weather_enabled 
       });
+      const resolved = resolveWeatherLocation(
+        settings?.weather_city ?? '',
+        settings?.weather_country ?? '',
+      );
       return {
         weather_enabled: settings?.weather_enabled ?? false,
-        weather_city: settings?.weather_city ?? '',
-        weather_country: settings?.weather_country ?? '',
+        weather_city: resolved.city,
+        weather_country: resolved.country,
         force_use_location: settings?.force_use_location ?? false,
       };
     } catch (e) {
       logger.error('weatherService', 'loadWeatherSettings', `Failed to load weather settings: ${e}`, { error: e });
+      const resolved = resolveWeatherLocation('', '');
       return {
         weather_enabled: false,
-        weather_city: '',
-        weather_country: '',
+        weather_city: resolved.city,
+        weather_country: resolved.country,
         force_use_location: false,
       };
     }
@@ -90,8 +111,9 @@ export const weatherService = {
         longitude = ipJson.lon;
         name = ipJson.city;
         country = ipJson.country;
-      } catch (geoError) {
-        throw new Error('IP geolocation failed and no fallback location provided');
+      } catch {
+        const fallback = resolveWeatherLocation('', '');
+        return this.fetchWeather(fallback.city, fallback.country);
       }
 
       const weatherRes = await fetch(
@@ -116,9 +138,7 @@ export const weatherService = {
   },
 
   async fetchWeather(weatherCity: string, weatherCountry: string): Promise<WeatherData | null> {
-    if (!weatherCity) {
-      return null;
-    }
+    const { city, country } = resolveWeatherLocation(weatherCity, weatherCountry);
 
     const cachedWeather = cache.get<WeatherData>('weather');
     if (cachedWeather) {
@@ -127,14 +147,14 @@ export const weatherService = {
 
     try {
       const geoRes = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(weatherCity)}&countryCode=${encodeURIComponent(weatherCountry)}&count=10&language=en&format=json`,
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&countryCode=${encodeURIComponent(country)}&count=10&language=en&format=json`,
       );
       const geoJson = await geoRes.json();
       if (!geoJson.results || !geoJson.results.length) {
         throw new Error('Location not found');
       }
 
-      const { latitude, longitude, name, country } = geoJson.results[0];
+      const { latitude, longitude, name, country: resolvedCountryName } = geoJson.results[0];
       const weatherRes = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`,
       );
@@ -144,7 +164,7 @@ export const weatherService = {
       const weatherData: WeatherData = {
         ...weatherJson.current_weather,
         location: name,
-        country,
+        country: resolvedCountryName,
         forecast,
       };
 

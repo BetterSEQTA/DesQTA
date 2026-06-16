@@ -642,7 +642,7 @@
     "show_weather_widget": "Afficher le Widget Météo",
     "only_fallback_location": "Utiliser uniquement l'Emplacement de Secours pour la Météo",
     "fallback_city": "Ville de Secours :",
-    "city_placeholder": "Perth",
+    "city_placeholder": "Adelaide",
     "fallback_country_code": "Code Pays de Secours",
     "country_placeholder": "AU",
     "dashboard_shortcuts": "Raccourcis du Tableau de Bord",

@@ -12,11 +12,12 @@
 </script>
 
 <div
-  class="flex gap-3 items-center px-4 py-2 ml-4 text-sm font-medium rounded-xl border backdrop-blur-md bg-white/60 border-zinc-200/40 dark:bg-zinc-800/60 dark:border-zinc-700/40">
+  class="flex shrink-0 gap-2 items-center px-3 py-2 text-sm font-medium rounded-xl border backdrop-blur-md 2xl:gap-3 2xl:px-4 bg-white/60 border-zinc-200/40 dark:bg-zinc-800/60 dark:border-zinc-700/40"
+  title="{weatherData.location}{weatherData.country ? `, ${weatherData.country}` : ''}">
   <div class="flex gap-2 items-center">
     <div
       class="flex justify-center items-center w-6 h-6 bg-yellow-100 rounded-lg dark:bg-yellow-900/30">
-      <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" aria-hidden="true">
         {#if weatherData.weathercode === 0}
           <!-- Clear -->
           <circle cx="12" cy="12" r="8" fill="#facc15" />
@@ -30,9 +31,10 @@
         {/if}
       </svg>
     </div>
-    <span class="font-semibold text-zinc-900 dark:text-white"
+    <span class="font-semibold whitespace-nowrap text-zinc-900 dark:text-white"
       >{Math.round(weatherData.temperature)}°C</span>
   </div>
-  <span class="hidden text-zinc-600 sm:inline dark:text-zinc-400"
+  <span
+    class="hidden max-w-[8rem] truncate text-zinc-600 2xl:inline dark:text-zinc-400"
     >{weatherData.location}</span>
 </div>

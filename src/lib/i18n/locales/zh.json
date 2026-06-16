@@ -634,7 +634,7 @@
     "show_weather_widget": "显示天气小部件",
     "only_fallback_location": "仅使用备用位置获取天气",
     "fallback_city": "备用城市：",
-    "city_placeholder": "Perth",
+    "city_placeholder": "Adelaide",
     "fallback_country_code": "备用国家代码",
     "country_placeholder": "AU",
     "dashboard_shortcuts": "仪表板快捷方式",

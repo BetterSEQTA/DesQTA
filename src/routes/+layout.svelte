@@ -21,6 +21,7 @@
     checkSession as checkSessionAuth,
     loadUserInfo as loadUserInfoAuth,
     handleLogout as handleLogoutAuth,
+    invalidateSession as invalidateSessionAuth,
     startLogin as startLoginAuth,
   } from '../lib/services/layoutAuthService';
   import { runCloudSettingsStartupSync } from '../lib/services/layoutCloudService';
@@ -29,7 +30,7 @@
   import { warmUpCommonData } from '../lib/services/warmupService';
   import { logger } from '../utils/logger';
   import { seqtaFetch } from '../utils/netUtil';
-  import { useWeather } from '../lib/composables/useWeather';
+  import { useWeather } from '$lib/composables/useWeather.svelte';
   import { useSidebar } from '../lib/composables/useSidebar';
   import { usePlatform } from '../lib/composables/usePlatform';
   import { useLayoutListeners } from '../lib/composables/useLayoutListeners';
@@ -140,11 +141,11 @@
   const platform = usePlatform();
 
   // Sync composable state with component state
-  let weatherEnabled = $derived(weather.state.enabled);
-  let weatherData = $derived(weather.state.data);
-  let loadingWeather = $derived(weather.state.loading);
-  let weatherError = $derived(weather.state.error);
-  let forceUseLocation = $derived(weather.state.forceUseLocation);
+  let weatherEnabled = $derived(weather.enabled);
+  let weatherData = $derived(weather.data);
+  let loadingWeather = $derived(weather.loading);
+  let weatherError = $derived(weather.error);
+  let forceUseLocation = $derived(weather.forceUseLocation);
   let autoCollapseSidebar = $state(false);
   let autoExpandSidebarHover = $state(false);
   let isMobile = $derived($platformStore.isMobile);
@@ -210,6 +211,7 @@
     logger.logComponentUnmount('layout');
     unlistenLayout?.();
     window.removeEventListener('redo-onboarding', handleRedoOnboarding);
+    window.removeEventListener('weather-settings-changed', handleWeatherSettingsChanged);
     if (unlistenShowWhatsNew) {
       window.removeEventListener('show-whats-new', unlistenShowWhatsNew);
     }
@@ -233,6 +235,17 @@
       loadSettings,
       onDisableSchoolPicture: (v) => (disableSchoolPicture = v),
       onUserInfo: (info) => (userInfo = info),
+      devMockEnabled,
+      onSessionInvalid: () => needsSetup.set(true),
+    });
+  };
+
+  const invalidateSession = async () => {
+    setBiometricSessionUnlocked(false);
+    await invalidateSessionAuth({
+      onSessionInvalid: () => needsSetup.set(true),
+      onClearUser: () => (userInfo = undefined),
+      onCloseDropdown: () => (showUserDropdown = false),
     });
   };
 
@@ -279,8 +292,8 @@
         responseStr.includes('"status":401') ||
         responseStr.toLowerCase().includes('unauthorized')
       ) {
-        logger.warn('layout', 'healthCheck', 'Heartbeat returned 401, logging out');
-        await handleLogout();
+        logger.warn('layout', 'healthCheck', 'Heartbeat returned 401, redirecting to login');
+        await invalidateSession();
       }
     } catch (e) {
       // Network errors should not auto-logout; log and continue
@@ -307,7 +320,7 @@
   };
 
   const loadWeatherSettings = async () => {
-    await weather.loadSettings();
+    await weather.refreshFromSettings();
   };
 
   const cloudSyncOptions = {
@@ -392,6 +405,12 @@
     }
   };
 
+  const handleWeatherSettingsChanged = () => {
+    loadWeatherSettings().catch((e) => {
+      logger.debug('layout', 'weatherSettingsChanged', 'Failed to refresh weather', { error: e });
+    });
+  };
+
   onMount(async () => {
     logger.logComponentMount('layout');
 
@@ -420,6 +439,7 @@
 
     // Set up redo onboarding listener
     window.addEventListener('redo-onboarding', handleRedoOnboarding);
+    window.addEventListener('weather-settings-changed', handleWeatherSettingsChanged);
 
     // Initialize theme and i18n first
     await Promise.all([
@@ -597,8 +617,8 @@
               responseStr.toLowerCase().includes('authentication failed'));
 
           if (isAuthFailure) {
-            logger.warn('layout', 'onMount', 'Session invalid, logging out');
-            await handleLogout();
+            logger.warn('layout', 'onMount', 'Session invalid, redirecting to login');
+            await invalidateSession();
           }
         } catch (e) {
           logger.error('layout', 'onMount', 'SEQTA session check failed', { error: e });
@@ -610,11 +630,6 @@
       const { initializeApp } = await import('$lib/services/startupService');
       await initializeApp(get(needsSetup), devMockEnabled);
       contentLoading = false;
-
-      // Background tasks (warmup already triggered by startupService)
-      if (weatherEnabled) {
-        fetchWeather(!forceUseLocation);
-      }
 
       // Run a one-time heartbeat health check on app open without blocking initial content render
       healthCheck().catch((e) => {
@@ -919,6 +934,9 @@
         {showUserDropdown}
         {isFullscreen}
         {isMobile}
+        {weatherEnabled}
+        {weatherData}
+        {loadingWeather}
         onToggleSidebar={() => (sidebarOpen = !sidebarOpen)}
         onToggleUserDropdown={() => (showUserDropdown = !showUserDropdown)}
         onLogout={handleLogout}

@@ -430,6 +430,7 @@ pub fn run() {
             settings::get_settings_json,
             settings::save_settings_from_json,
             settings::get_settings_subset,
+            settings::get_cloud_sync_settings,
             settings::save_settings_merge,
             settings::save_cloud_token,
             settings::get_cloud_user,

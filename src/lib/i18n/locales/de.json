@@ -639,7 +639,7 @@
     "show_weather_widget": "Wetter-Widget Anzeigen",
     "only_fallback_location": "Nur Fallback-Standort für Wetter Verwenden",
     "fallback_city": "Fallback-Stadt:",
-    "city_placeholder": "Perth",
+    "city_placeholder": "Adelaide",
     "fallback_country_code": "Fallback-Ländercode",
     "country_placeholder": "AU",
     "dashboard_shortcuts": "Dashboard-Verknüpfungen",

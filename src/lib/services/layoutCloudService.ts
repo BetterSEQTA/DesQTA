@@ -1,11 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { cloudAuthService } from './cloudAuthService';
 import { checkCloudSignOutAlert } from './cloudSignOutAlertService';
-import {
-  cloudSettingsService,
-  persistCloudSettingsServerMeta,
-} from './cloudSettingsService';
-import { pushFullCloudSettingsSync } from './settingsSync';
+import { cloudSettingsService } from './cloudSettingsService';
+import { applySyncInitResult } from './settingsSync';
 import {
   loadAccentColor,
   loadTheme,
@@ -68,56 +65,9 @@ export async function runCloudSettingsStartupSync(options: {
       const result = await cloudSettingsService.syncInit(body);
 
       if (result) {
-        const rev = result.server?.settings_revision;
-        const at = result.server?.settings_updated_at ?? null;
-
-        switch (result.status) {
-          case 'no_remote_settings': {
-            if (typeof rev === 'number' && Number.isFinite(rev)) {
-              await persistCloudSettingsServerMeta(rev, at);
-              sessionStorage.setItem('settings_last_synced_hash', `rev:${rev}`);
-            }
-            break;
-          }
-          case 'up_to_date': {
-            if (typeof rev === 'number' && Number.isFinite(rev)) {
-              await persistCloudSettingsServerMeta(rev, at);
-              sessionStorage.setItem('settings_last_synced_hash', `rev:${rev}`);
-            }
-            break;
-          }
-          case 'client_ahead': {
-            logger.info('layoutCloud', 'runCloudSettingsStartupSync', 'client_ahead — uploading');
-            await pushFullCloudSettingsSync();
-            break;
-          }
-          case 'server_has_newer': {
-            if (result.settings && typeof result.settings === 'object' && typeof rev === 'number') {
-              await invoke('save_settings_merge', {
-                patch: {
-                  ...result.settings,
-                  cloud_settings_server_revision: rev,
-                  cloud_settings_server_updated_at: at,
-                },
-              });
-              languageFromCloud =
-                typeof result.settings.language === 'string' ? result.settings.language : undefined;
-              sessionStorage.setItem('settings_last_synced_hash', `rev:${rev}`);
-              shouldReload = true;
-            } else {
-              logger.warn(
-                'layoutCloud',
-                'runCloudSettingsStartupSync',
-                'server_has_newer without settings payload',
-              );
-            }
-            break;
-          }
-          default:
-            logger.warn('layoutCloud', 'runCloudSettingsStartupSync', 'Unknown sync-init status', {
-              status: (result as { status?: string }).status,
-            });
-        }
+        const applied = await applySyncInitResult(result);
+        shouldReload = applied.reload;
+        languageFromCloud = applied.language;
       }
     } catch (e) {
       logger.warn('layoutCloud', 'runCloudSettingsStartupSync', 'sync-init failed, GET fallback', {

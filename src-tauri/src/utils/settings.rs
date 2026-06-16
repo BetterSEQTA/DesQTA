@@ -317,6 +317,144 @@ fn default_custom_background_opacity() -> f64 {
     1.0
 }
 
+/// Every setting key that participates in cloud sync (whitelist + patch-tier keys).
+/// Kept in sync with `CLOUD_SYNC_SUBSET_KEYS` + patch keys in `src/lib/services/settingsSync.ts`.
+/// On load, missing keys are materialized from defaults and persisted so uploads send a full schema.
+const CLOUD_SYNC_STORAGE_KEYS: &[&str] = &[
+    // Tier 1 — canonical whitelist
+    "shortcuts",
+    "feeds",
+    "weather_enabled",
+    "weather_city",
+    "weather_country",
+    "reminders_enabled",
+    "force_use_location",
+    "accent_color",
+    "theme",
+    "current_theme",
+    "disable_school_picture",
+    "enhanced_animations",
+    "gemini_api_key",
+    "ai_integrations_enabled",
+    "grade_analyser_enabled",
+    "lesson_summary_analyser_enabled",
+    "quiz_generator_enabled",
+    "auto_collapse_sidebar",
+    "auto_expand_sidebar_hover",
+    "global_search_enabled",
+    "dev_sensitive_info_hider",
+    "dev_force_offline_mode",
+    "accepted_cloud_eula",
+    "send_anonymous_usage_statistics",
+    "sync_cloud_pfp",
+    "language",
+    "zoom_level",
+    "biometric_enabled",
+    "dashboard_today_schedule_fit_width",
+    // Tier 2 — synced on patch / full schema
+    "auto_dismiss_message_notifications",
+    "cerebras_api_key",
+    "ai_provider",
+    "minimize_to_tray",
+    "separate_rss_feed",
+    "menu_order",
+    "sidebar_folders",
+    "sidebar_favorites",
+    "disabled_sidebar_pages",
+    "downloaded_theme_ids",
+    "downloaded_theme_metadata",
+    "custom_background_enabled",
+    "custom_background_fit",
+    "custom_background_opacity",
+    "custom_background_dim",
+    "has_been_through_onboarding",
+    "has_completed_setup_assistant",
+    "has_completed_post_login_prompts",
+];
+
+fn json_missing_cloud_sync_keys(obj: &serde_json::Value) -> bool {
+    let Some(map) = obj.as_object() else {
+        return true;
+    };
+    CLOUD_SYNC_STORAGE_KEYS
+        .iter()
+        .any(|k| !map.contains_key(*k))
+}
+
+/// Insert only absent cloud-sync keys from `settings` into existing JSON (never overwrite present keys).
+fn materialize_missing_cloud_sync_keys(
+    settings: &Settings,
+    root: &mut serde_json::Value,
+) -> io::Result<bool> {
+    let full = serde_json::to_value(settings).map_err(|e| {
+        io::Error::new(io::ErrorKind::InvalidData, e.to_string())
+    })?;
+    let Some(map) = root.as_object_mut() else {
+        return Ok(false);
+    };
+    let mut changed = false;
+    for k in CLOUD_SYNC_STORAGE_KEYS {
+        if !map.contains_key(*k) {
+            if let Some(v) = full.get(*k) {
+                map.insert((*k).to_string(), v.clone());
+                changed = true;
+            }
+        }
+    }
+    Ok(changed)
+}
+
+/// Merge all Settings fields into existing JSON while preserving unknown top-level keys.
+fn persist_settings_merging_json(settings: &Settings, original_json: &serde_json::Value) -> io::Result<()> {
+    let path = settings_file();
+    let merged_settings = serde_json::to_value(settings).map_err(|e| {
+        io::Error::new(io::ErrorKind::InvalidData, e.to_string())
+    })?;
+    let mut root = original_json.clone();
+    if let (Some(root_map), Some(settings_map)) = (root.as_object_mut(), merged_settings.as_object()) {
+        for (k, v) in settings_map {
+            root_map.insert(k.clone(), v.clone());
+        }
+        fs::write(path, serde_json::to_string(&root).map_err(|e| {
+            io::Error::new(io::ErrorKind::InvalidData, e.to_string())
+        })?)
+    } else {
+        settings.save()
+    }
+}
+
+fn persist_materialized_cloud_sync_keys(settings: &Settings, contents: &str) -> io::Result<()> {
+    let path = settings_file();
+    let mut json: serde_json::Value = serde_json::from_str(contents).map_err(|e| {
+        io::Error::new(io::ErrorKind::InvalidData, e.to_string())
+    })?;
+    if !json_missing_cloud_sync_keys(&json) {
+        return Ok(());
+    }
+    if materialize_missing_cloud_sync_keys(settings, &mut json)? {
+        fs::write(path, serde_json::to_string(&json).map_err(|e| {
+            io::Error::new(io::ErrorKind::InvalidData, e.to_string())
+        })?)
+    } else {
+        Ok(())
+    }
+}
+
+fn settings_value_for_cloud_sync_keys(settings: &Settings) -> Result<serde_json::Value, String> {
+    let full = serde_json::to_value(settings).map_err(|e| e.to_string())?;
+    let defaults = serde_json::to_value(Settings::default()).map_err(|e| e.to_string())?;
+    let mut result = serde_json::Map::new();
+    for k in CLOUD_SYNC_STORAGE_KEYS {
+        let v = full
+            .get(*k)
+            .or_else(|| defaults.get(*k))
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
+        result.insert((*k).to_string(), v);
+    }
+    Ok(serde_json::Value::Object(result))
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Self {
@@ -324,8 +462,8 @@ impl Default for Settings {
             feeds: Vec::new(),
             weather_enabled: false,
             force_use_location: false,
-            weather_city: String::new(),
-            weather_country: String::new(),
+            weather_city: "Adelaide".to_string(),
+            weather_country: "AU".to_string(),
             reminders_enabled: false,
             auto_dismiss_message_notifications: false,
             accent_color: "#3b82f6".to_string(), // Default to blue-500
@@ -413,6 +551,8 @@ pub struct CloudUser {
     pub display_name: String,
     #[serde(rename = "pfpUrl")]
     pub pfp_url: Option<String>,
+    #[serde(rename = "pfpHash", default)]
+    pub pfp_hash: Option<String>,
     #[serde(rename = "createdAt", default)]
     pub created_at: Option<String>,
     #[serde(rename = "is_admin", default)]
@@ -471,23 +611,60 @@ struct APIError {
 
 impl Settings {
     /// Load from disk with smart merging; returns default if none.
+    /// Materializes missing cloud-sync keys without overwriting existing values or unknown JSON keys.
     pub fn load() -> Self {
         let path = settings_file();
-        if let Ok(mut file) = fs::File::open(&path) {
-            let mut contents = String::new();
-            if file.read_to_string(&mut contents).is_ok() {
-                // Try to parse as the current Settings struct first
+        match fs::read_to_string(&path) {
+            Ok(contents) if !contents.trim().is_empty() => {
                 if let Ok(settings) = serde_json::from_str::<Settings>(&contents) {
-                    return settings;
-                }
-
-                // If that fails, try to merge with existing JSON
-                if let Ok(existing_json) = serde_json::from_str::<serde_json::Value>(&contents) {
-                    return Self::merge_with_existing(existing_json);
+                    if let Ok(_) = persist_materialized_cloud_sync_keys(&settings, &contents) {
+                        // Missing cloud-sync keys added in place; existing keys untouched.
+                    } else if let Some(logger) = logger::get_logger() {
+                        let _ = logger.log(
+                            logger::LogLevel::WARN,
+                            "settings",
+                            "load",
+                            "Could not materialize cloud-sync keys; using loaded settings in memory",
+                            serde_json::json!({}),
+                        );
+                    }
+                    settings
+                } else if let Ok(existing_json) =
+                    serde_json::from_str::<serde_json::Value>(&contents)
+                {
+                    let settings = Self::merge_with_existing(existing_json.clone());
+                    if let Err(e) = persist_settings_merging_json(&settings, &existing_json) {
+                        if let Some(logger) = logger::get_logger() {
+                            let _ = logger.log(
+                                logger::LogLevel::WARN,
+                                "settings",
+                                "load",
+                                &format!("Legacy merge persist failed: {}", e),
+                                serde_json::json!({"error": e.to_string()}),
+                            );
+                        }
+                    }
+                    settings
+                } else {
+                    // Unparseable JSON — do not overwrite the file (avoid data loss).
+                    if let Some(logger) = logger::get_logger() {
+                        let _ = logger.log(
+                            logger::LogLevel::ERROR,
+                            "settings",
+                            "load",
+                            "settings.json is corrupt; using in-memory defaults without overwriting disk",
+                            serde_json::json!({}),
+                        );
+                    }
+                    Settings::default()
                 }
             }
+            _ => {
+                let settings = Settings::default();
+                let _ = settings.save();
+                settings
+            }
         }
-        Settings::default()
     }
 
     /// Smart merge function that preserves existing settings when new fields are added
@@ -906,7 +1083,7 @@ pub fn save_settings_from_json(json: String) -> Result<(), String> {
 #[tauri::command]
 pub fn get_settings_subset(keys: Vec<String>) -> Result<serde_json::Value, String> {
     let settings = Settings::load();
-    let full = serde_json::to_value(settings).map_err(|e| e.to_string())?;
+    let full = serde_json::to_value(&settings).map_err(|e| e.to_string())?;
     let mut result = serde_json::Map::new();
     for k in keys {
         if let Some(v) = full.get(&k) {
@@ -914,6 +1091,13 @@ pub fn get_settings_subset(keys: Vec<String>) -> Result<serde_json::Value, Strin
         }
     }
     Ok(serde_json::Value::Object(result))
+}
+
+/// Full cloud-sync schema snapshot (all tier-1 + tier-2 sync keys with defaults materialized).
+#[tauri::command]
+pub fn get_cloud_sync_settings() -> Result<serde_json::Value, String> {
+    let settings = Settings::load();
+    settings_value_for_cloud_sync_keys(&settings)
 }
 
 /// Merge partial settings into current settings and save (coalesces get+save into one call).
@@ -926,7 +1110,7 @@ pub fn save_settings_merge(patch: serde_json::Value) -> Result<(), String> {
     if let (Some(obj_curr), Some(obj_patch)) = (current_val.as_object_mut(), patch.as_object()) {
         for (k, v) in obj_patch.iter() {
             // Never persist API envelope keys from POST /api/settings
-            if k == "ok" || k == "server" {
+            if k == "ok" || k == "server" || k == "patch" {
                 continue;
             }
             obj_curr.insert(k.clone(), v.clone());
@@ -1310,4 +1494,67 @@ pub async fn check_cloud_settings() -> Result<bool, String> {
         )
     })?;
     Ok(!file_list.files.is_empty())
+}
+
+#[cfg(test)]
+mod cloud_sync_storage_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn missing_keys_detects_absent_cloud_sync_key() {
+        assert!(json_missing_cloud_sync_keys(&json!({"theme": "dark"})));
+    }
+
+    #[test]
+    fn missing_keys_treats_null_as_present() {
+        let mut obj = serde_json::Map::new();
+        obj.insert("theme".to_string(), json!("dark"));
+        for k in CLOUD_SYNC_STORAGE_KEYS {
+            if *k != "theme" {
+                obj.insert((*k).to_string(), serde_json::Value::Null);
+            }
+        }
+        assert!(!json_missing_cloud_sync_keys(&serde_json::Value::Object(obj)));
+    }
+
+    #[test]
+    fn materialize_preserves_existing_and_unknown_keys() {
+        let mut json = json!({
+            "theme": "light",
+            "accent_color": "#ff0000",
+            "legacy_unknown_key": true
+        });
+        let settings = Settings::default();
+        assert!(json_missing_cloud_sync_keys(&json));
+        materialize_missing_cloud_sync_keys(&settings, &mut json).unwrap();
+        assert_eq!(json["theme"], "light");
+        assert_eq!(json["accent_color"], "#ff0000");
+        assert_eq!(json["legacy_unknown_key"], true);
+        assert_eq!(json["language"], "en");
+        assert!(!json_missing_cloud_sync_keys(&json));
+    }
+
+    #[test]
+    fn materialize_does_not_overwrite_existing_values() {
+        let mut json = json!({
+            "theme": "light",
+            "language": "de"
+        });
+        let settings = Settings::default();
+        materialize_missing_cloud_sync_keys(&settings, &mut json).unwrap();
+        assert_eq!(json["theme"], "light");
+        assert_eq!(json["language"], "de");
+    }
+
+    #[test]
+    fn cloud_sync_snapshot_includes_all_storage_keys() {
+        let settings = Settings::default();
+        let snapshot = settings_value_for_cloud_sync_keys(&settings).unwrap();
+        let obj = snapshot.as_object().unwrap();
+        assert_eq!(obj.len(), CLOUD_SYNC_STORAGE_KEYS.len());
+        for k in CLOUD_SYNC_STORAGE_KEYS {
+            assert!(obj.contains_key(*k), "missing key in snapshot: {}", k);
+        }
+    }
 }

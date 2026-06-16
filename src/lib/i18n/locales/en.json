@@ -749,7 +749,7 @@
     "show_weather_widget": "Show Weather Widget",
     "only_fallback_location": "Only use Fallback Location for Weather",
     "fallback_city": "Fallback City:",
-    "city_placeholder": "Perth",
+    "city_placeholder": "Adelaide",
     "fallback_country_code": "Fallback Country Code",
     "country_placeholder": "AU",
     "dashboard_shortcuts": "Dashboard Shortcuts",

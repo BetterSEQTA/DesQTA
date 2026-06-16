@@ -634,7 +634,7 @@
     "show_weather_widget": "天気ウィジェットを表示",
     "only_fallback_location": "天気にはフォールバック位置のみを使用",
     "fallback_city": "フォールバック都市：",
-    "city_placeholder": "Perth",
+    "city_placeholder": "Adelaide",
     "fallback_country_code": "フォールバック国コード",
     "country_placeholder": "AU",
     "dashboard_shortcuts": "ダッシュボードショートカット",

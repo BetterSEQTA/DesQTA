@@ -3,6 +3,7 @@
   import UserDropdown from './UserDropdown.svelte';
   import QuestionnaireWidget from './QuestionnaireWidget.svelte';
   import QuestionnaireModal from './QuestionnaireModal.svelte';
+  import WeatherWidget from './WeatherWidget.svelte';
   import {
     Icon,
     Bars3,
@@ -47,6 +48,14 @@
     onShowAbout: () => void;
     onClickOutside: (event: MouseEvent) => void;
     disableSchoolPicture?: boolean;
+    weatherEnabled?: boolean;
+    weatherData?: {
+      temperature: number;
+      weathercode: number;
+      location: string;
+      country: string;
+    } | null;
+    loadingWeather?: boolean;
   }
 
   interface UserInfo {
@@ -129,6 +138,9 @@
     onShowAbout,
     onClickOutside,
     disableSchoolPicture = false,
+    weatherEnabled = false,
+    weatherData = null,
+    loadingWeather = false,
   }: Props = $props();
 
   const appWindow = Window.getCurrent();
@@ -545,6 +557,19 @@
             currentQuestion = question;
             showQuestionnaireModal = true;
           }} />
+        {#if weatherEnabled && weatherData}
+          <WeatherWidget {weatherData} />
+        {:else if weatherEnabled && loadingWeather}
+          <div
+            class="flex shrink-0 gap-2 items-center px-3 py-2 text-sm rounded-xl border backdrop-blur-md bg-white/60 border-zinc-200/40 dark:bg-zinc-800/60 dark:border-zinc-700/40">
+            <div
+              class="w-4 h-4 rounded-full border-2 animate-spin border-accent/30 border-t-accent">
+            </div>
+            <span class="hidden text-zinc-600 2xl:inline dark:text-zinc-400">
+              <T key="common.loading" fallback="Loading..." />
+            </span>
+          </div>
+        {/if}
       {/if}
     </div>
   </div>

@@ -691,7 +691,7 @@
     "show_weather_widget": "Mostra Widget Meteo",
     "only_fallback_location": "Usa solo Posizione di Fallback per il Meteo",
     "fallback_city": "Città di Fallback:",
-    "city_placeholder": "Perth",
+    "city_placeholder": "Adelaide",
     "fallback_country_code": "Codice Paese di Fallback",
     "country_placeholder": "AU",
     "dashboard_shortcuts": "Scorciatoie Dashboard",

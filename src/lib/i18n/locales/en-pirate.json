@@ -599,7 +599,7 @@
     "show_weather_widget": "Show Weather Compass",
     "only_fallback_location": "Only use Backup Port for Weather",
     "fallback_city": "Backup Port:",
-    "city_placeholder": "Port Perth",
+    "city_placeholder": "Port Adelaide",
     "fallback_country_code": "Backup Waters Code",
     "country_placeholder": "AU",
     "dashboard_shortcuts": "Ship's Deck Shortcuts",

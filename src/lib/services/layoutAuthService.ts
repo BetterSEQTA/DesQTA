@@ -43,13 +43,18 @@ export interface LayoutAuthLoadUserInfoOptions {
   loadSettings: (keys: string[]) => Promise<Record<string, unknown>>;
   onDisableSchoolPicture: (value: boolean) => void;
   onUserInfo: (info: UserInfo | undefined) => void;
+  /** When true, skip stale-session invalidation (dev mock mode). */
+  devMockEnabled?: boolean;
+  /** Called when session cookies exist but SEQTA rejects auth — redirect to login. */
+  onSessionInvalid?: () => void;
 }
 
 /**
  * Load user info and sync disable_school_picture setting.
  */
 export async function loadUserInfo(options: LayoutAuthLoadUserInfoOptions): Promise<void> {
-  const { loadSettings, onDisableSchoolPicture, onUserInfo } = options;
+  const { loadSettings, onDisableSchoolPicture, onUserInfo, devMockEnabled, onSessionInvalid } =
+    options;
 
   const settings = await loadSettings(['disable_school_picture']);
   const disableSchoolPicture = settings.disable_school_picture === true;
@@ -57,6 +62,46 @@ export async function loadUserInfo(options: LayoutAuthLoadUserInfoOptions): Prom
 
   const info = await authService.loadUserInfo({ disableSchoolPicture });
   onUserInfo(info);
+
+  // Session file may still exist while SEQTA has expired the session — send user to login.
+  if (!devMockEnabled && !info) {
+    try {
+      const sessionExists = await authService.checkSession();
+      if (sessionExists) {
+        logger.warn('layoutAuth', 'loadUserInfo', 'Stale session detected, redirecting to login');
+        await invalidateSession({ onSessionInvalid: onSessionInvalid ?? (() => {}) });
+      }
+    } catch (error) {
+      logger.error('layoutAuth', 'loadUserInfo', `Stale session check failed: ${error}`, { error });
+    }
+  }
+}
+
+export interface LayoutAuthInvalidateSessionOptions {
+  onSessionInvalid: () => void;
+  onClearUser?: () => void;
+  onCloseDropdown?: () => void;
+}
+
+/**
+ * Clear an expired/invalid SEQTA session and show the login screen.
+ */
+export async function invalidateSession(options: LayoutAuthInvalidateSessionOptions): Promise<void> {
+  const { onSessionInvalid, onClearUser, onCloseDropdown } = options;
+  logger.logFunctionEntry('layoutAuth', 'invalidateSession');
+
+  try {
+    await authService.logout();
+  } catch (error) {
+    logger.warn('layoutAuth', 'invalidateSession', `Logout during invalidation failed: ${error}`, {
+      error,
+    });
+  }
+
+  onClearUser?.();
+  onCloseDropdown?.();
+  onSessionInvalid();
+  logger.logFunctionExit('layoutAuth', 'invalidateSession');
 }
 
 export interface LayoutAuthHandleLogoutOptions {

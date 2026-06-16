@@ -58,6 +58,7 @@
   import { toastStore } from '../../lib/stores/toast';
   import { cloudSettingsService } from '../../lib/services/cloudSettingsService';
   import { saveSettingsWithQueue, flushSettingsQueue } from '../../lib/services/settingsSync';
+  import { resolveWeatherLocation } from '../../lib/services/weatherService';
   import { platformStore } from '../../lib/stores/platform';
   import { checkStatus, authenticate } from '@choochmeque/tauri-plugin-biometry-api';
 
@@ -68,6 +69,8 @@
   import Modal from '../../lib/components/Modal.svelte';
   import ProfilePictureCropModal from '../../lib/components/ProfilePictureCropModal.svelte';
   import CustomBackgroundSettings from '../../lib/components/settings/CustomBackgroundSettings.svelte';
+  import CloudPfpAvatar from '../../lib/components/CloudPfpAvatar.svelte';
+  import { afterProfilePictureChange } from '../../lib/services/cloudPfpSyncService';
 
   interface Shortcut {
     name: string;
@@ -309,7 +312,11 @@ The Company reserves the right to terminate your access to the Service at any ti
       if (user) {
         cloudAuthService
           .getProfile()
-          .then((u) => (cloudUser = u))
+          .then(async (u) => {
+            cloudUser = u;
+            const { syncCloudPfpToLocal } = await import('$lib/services/cloudPfpSyncService');
+            await syncCloudPfpToLocal();
+          })
           .catch(() => {
             cloudUser = null;
           });
@@ -367,8 +374,12 @@ The Company reserves the right to terminate your access to the Service at any ti
       feeds = settings.feeds || [];
       weatherEnabled = settings.weather_enabled ?? false;
       forceUseLocation = settings.force_use_location ?? false;
-      weatherCity = settings.weather_city ?? '';
-      weatherCountry = settings.weather_country ?? '';
+      const resolvedWeather = resolveWeatherLocation(
+        settings.weather_city ?? '',
+        settings.weather_country ?? '',
+      );
+      weatherCity = resolvedWeather.city;
+      weatherCountry = resolvedWeather.country;
       remindersEnabled = settings.reminders_enabled ?? false;
       autoDismissMessageNotifications = settings.auto_dismiss_message_notifications ?? false;
       disableSchoolPicture = settings.disable_school_picture ?? false;
@@ -474,29 +485,6 @@ The Company reserves the right to terminate your access to the Service at any ti
     loading = false;
   }
 
-  // Helper function to get full profile picture URL
-  function getFullPfpUrl(pfpUrl: string | null | undefined): string | null {
-    if (!pfpUrl) return null;
-
-    // If it's already a full URL, return as is
-    if (pfpUrl.startsWith('http://') || pfpUrl.startsWith('https://')) {
-      return pfpUrl;
-    }
-
-    // If it's a relative path, prepend the base domain
-    if (pfpUrl.startsWith('/pfp/')) {
-      return `https://accounts.betterseqta.org${pfpUrl}`;
-    }
-
-    // If it's a relative path, prepend the base domain
-    if (pfpUrl.startsWith('/api/files/public/')) {
-      return `https://accounts.betterseqta.org${pfpUrl}`;
-    }
-
-    // Fallback to DiceBear if it's not a recognized format
-    return pfpUrl;
-  }
-
   async function saveSettings(options: { skipReload?: boolean } = {}) {
     saving = true;
     saveSuccess = false;
@@ -515,12 +503,13 @@ The Company reserves the right to terminate your access to the Service at any ti
     try {
       // Filter out feeds with empty URLs before saving
       const validFeeds = feeds.filter((f) => f.url?.trim());
+      const resolvedWeather = resolveWeatherLocation(weatherCity, weatherCountry);
       const patch = {
         shortcuts,
         feeds: validFeeds,
         weather_enabled: weatherEnabled,
-        weather_city: weatherCity,
-        weather_country: weatherCountry,
+        weather_city: resolvedWeather.city,
+        weather_country: resolvedWeather.country,
         reminders_enabled: remindersEnabled,
         auto_dismiss_message_notifications: autoDismissMessageNotifications,
         force_use_location: forceUseLocation,
@@ -571,6 +560,18 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       // Show success toast
       toastStore.success('Settings saved successfully');
+
+      weatherCity = resolvedWeather.city;
+      weatherCountry = resolvedWeather.country;
+
+      if (
+        patch.weather_enabled !== undefined ||
+        patch.weather_city !== undefined ||
+        patch.weather_country !== undefined ||
+        patch.force_use_location !== undefined
+      ) {
+        window.dispatchEvent(new CustomEvent('weather-settings-changed'));
+      }
 
       // Sync feeds to valid only (empty URLs were filtered out)
       feeds = validFeeds;
@@ -704,8 +705,12 @@ The Company reserves the right to terminate your access to the Service at any ti
     feeds = cloudSettings.feeds || [];
     weatherEnabled = cloudSettings.weather_enabled ?? false;
     forceUseLocation = cloudSettings.force_use_location ?? false;
-    weatherCity = cloudSettings.weather_city ?? '';
-    weatherCountry = cloudSettings.weather_country ?? '';
+    const resolvedWeather = resolveWeatherLocation(
+      cloudSettings.weather_city ?? '',
+      cloudSettings.weather_country ?? '',
+    );
+    weatherCity = resolvedWeather.city;
+    weatherCountry = resolvedWeather.country;
     remindersEnabled = cloudSettings.reminders_enabled ?? false;
     disableSchoolPicture = cloudSettings.disable_school_picture ?? false;
     enhancedAnimations = cloudSettings.enhanced_animations ?? true;
@@ -934,7 +939,13 @@ The Company reserves the right to terminate your access to the Service at any ti
   async function handleSyncCloudPfpChange() {
     await saveSettings({ skipReload: true });
     if (syncCloudPfp) {
-      const { syncCloudPfpToLocal } = await import('$lib/services/cloudPfpSyncService');
+      const { syncCloudPfpToLocal, syncLocalProfilePictureToCloud } = await import(
+        '$lib/services/cloudPfpSyncService'
+      );
+      const hasLocal = await invoke<boolean>('has_custom_profile_picture');
+      if (hasLocal) {
+        await syncLocalProfilePictureToCloud();
+      }
       await syncCloudPfpToLocal();
       loadProfilePicture();
     }
@@ -978,8 +989,10 @@ The Company reserves the right to terminate your access to the Service at any ti
     try {
       await invoke('save_profile_picture', { base64Data: croppedBase64 });
       customProfilePicture = croppedBase64;
+      showCropModal = false;
+      cropImageSrc = null;
       toastStore.success('Profile picture updated successfully');
-      setTimeout(() => window.location.reload(), 1000);
+      await afterProfilePictureChange({ syncToCloud: syncCloudPfp });
     } catch (error) {
       console.error('Failed to save profile picture:', error);
       toastStore.error('Failed to save profile picture. Please try again.');
@@ -998,13 +1011,8 @@ The Company reserves the right to terminate your access to the Service at any ti
     try {
       await invoke('delete_profile_picture');
       customProfilePicture = null;
-
       toastStore.success('Profile picture removed successfully');
-
-      // Refresh the page to update the header
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      await afterProfilePictureChange({ syncToCloud: syncCloudPfp });
     } catch (error) {
       console.error('Failed to remove profile picture:', error);
       toastStore.error('Failed to remove profile picture');
@@ -1307,18 +1315,10 @@ The Company reserves the right to terminate your access to the Service at any ti
                 <div class="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between">
                   <div class="flex gap-4 items-center">
                     <div class="relative shrink-0">
-                      {#if cloudUser.pfpUrl}
-                        <img
-                          src={getFullPfpUrl(cloudUser.pfpUrl) ||
-                            `https://api.dicebear.com/7.x/thumbs/svg?seed=${cloudUser.id}`}
-                          alt={cloudUser.displayName || cloudUser.username}
-                          class="object-cover w-14 h-14 rounded-full ring-2 ring-emerald-400/50 dark:ring-emerald-500/40" />
-                      {:else}
-                        <img
-                          src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${cloudUser.id}`}
-                          alt={cloudUser.displayName || cloudUser.username}
-                          class="object-cover w-14 h-14 rounded-full ring-2 ring-emerald-400/50 dark:ring-emerald-500/40" />
-                      {/if}
+                      <CloudPfpAvatar
+                        user={cloudUser}
+                        alt={cloudUser.displayName || cloudUser.username}
+                        class="object-cover w-14 h-14 rounded-full ring-2 ring-emerald-400/50 dark:ring-emerald-500/40" />
                       <div
                         class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900"
                         title="Connected">
@@ -1596,42 +1596,45 @@ The Company reserves the right to terminate your access to the Service at any ti
                       fallback="Only use Fallback Location for Weather" /></label>
                 </div>
 
-                <!-- Show fallback inputs ONLY if forceUseLocation is true -->
-                {#if forceUseLocation}
-                  <div class="flex flex-col gap-2 items-start pl-1">
-                    <label
-                      for="weather-city"
-                      class="text-xs text-zinc-600 sm:text-sm dark:text-zinc-400"
-                      ><T key="settings.fallback_city" fallback="Fallback City:" /></label>
-                    <input
-                      id="weather-city"
-                      class="px-3 py-2 w-full bg-white rounded-sm border transition text-zinc-900 sm:w-64 dark:bg-zinc-900/50 dark:text-white border-zinc-300/50 dark:border-zinc-700/50 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                      placeholder={$_('settings.city_placeholder') || 'Perth'}
-                      bind:value={weatherCity} />
-                  </div>
+                <!--
+                  DO NOT gate Fallback City / Fallback Country on force_use_location.
+                  These fields must ALWAYS be editable whenever "Show Weather Widget" is enabled.
+                  force_use_location only controls runtime GPS vs fallback — not field visibility.
+                  Do not remove or re-gate this block; AI agents must leave this behavior unchanged.
+                -->
+                <div class="flex flex-col gap-2 items-start pl-1">
+                  <label
+                    for="weather-city"
+                    class="text-xs text-zinc-600 sm:text-sm dark:text-zinc-400"
+                    ><T key="settings.fallback_city" fallback="Fallback City:" /></label>
+                  <input
+                    id="weather-city"
+                    class="px-3 py-2 w-full bg-white rounded-sm border transition text-zinc-900 sm:w-64 dark:bg-zinc-900/50 dark:text-white border-zinc-300/50 dark:border-zinc-700/50 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                      placeholder={$_('settings.city_placeholder') || 'Adelaide'}
+                    bind:value={weatherCity} />
+                </div>
 
-                  <div class="flex flex-col gap-2 items-start pl-1">
-                    <label
-                      for="weather-country"
-                      class="text-xs text-zinc-600 sm:text-sm dark:text-zinc-400"
-                      ><T
-                        key="settings.fallback_country_code"
-                        fallback="Fallback Country Code" /></label>
-                    <span class="text-xs">
-                      Visit <a
-                        href="https://countrycode.org"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="text-blue-400 hover:underline">countrycode.org</a> to find your country
-                      code.
-                    </span>
-                    <input
-                      id="weather-country"
-                      class="px-3 py-2 w-full bg-white rounded-sm border transition text-zinc-900 sm:w-64 dark:bg-zinc-900/50 dark:text-white border-zinc-300/50 dark:border-zinc-700/50 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                      placeholder={$_('settings.country_placeholder') || 'AU'}
-                      bind:value={weatherCountry} />
-                  </div>
-                {/if}
+                <div class="flex flex-col gap-2 items-start pl-1">
+                  <label
+                    for="weather-country"
+                    class="text-xs text-zinc-600 sm:text-sm dark:text-zinc-400"
+                    ><T
+                      key="settings.fallback_country_code"
+                      fallback="Fallback Country Code" /></label>
+                  <span class="text-xs">
+                    Visit <a
+                      href="https://countrycode.org"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-blue-400 hover:underline">countrycode.org</a> to find your country
+                    code.
+                  </span>
+                  <input
+                    id="weather-country"
+                    class="px-3 py-2 w-full bg-white rounded-sm border transition text-zinc-900 sm:w-64 dark:bg-zinc-900/50 dark:text-white border-zinc-300/50 dark:border-zinc-700/50 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                    placeholder={$_('settings.country_placeholder') || 'AU'}
+                    bind:value={weatherCountry} />
+                </div>
               {/if}
             </div>
           </div>

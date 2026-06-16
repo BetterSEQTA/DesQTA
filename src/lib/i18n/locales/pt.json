@@ -691,7 +691,7 @@
     "show_weather_widget": "Mostrar Widget do Clima",
     "only_fallback_location": "Usar apenas Localização de Fallback para o Clima",
     "fallback_city": "Cidade de Fallback:",
-    "city_placeholder": "Perth",
+    "city_placeholder": "Adelaide",
     "fallback_country_code": "Código do País de Fallback",
     "country_placeholder": "AU",
     "dashboard_shortcuts": "Atalhos do Painel",

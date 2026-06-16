@@ -3,7 +3,8 @@
 **Accounts base URL:** `https://accounts.betterseqta.org` (use your deployment host if different.)
 
 **Audience:** DesQTA client developers  
-**Auth:** Same as existing settings APIs — JWT bearer token. The accounts user id must be sent on sync-init as `X-User-ID` and **must match** the user id in the JWT.
+**Auth:** Same as existing settings APIs — JWT bearer token. The accounts user id must be sent on sync-init as `X-User-ID` and **must match** the user id in the JWT.  
+**Setting keys & formats (exhaustive):** [cloud-settings-keys.md](./cloud-settings-keys.md)
 
 ---
 

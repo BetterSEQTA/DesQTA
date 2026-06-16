@@ -3,7 +3,7 @@
   import { fade, scale } from 'svelte/transition';
   import { cubicInOut } from 'svelte/easing';
   import { Icon, Cloud } from 'svelte-hero-icons';
-  import { weatherService } from '../../services/weatherService';
+  import { weatherService, resolveWeatherLocation } from '../../services/weatherService';
   import type { WeatherData, ForecastDay } from '../../services/weatherService';
   import { logger } from '../../../utils/logger';
 
@@ -57,9 +57,17 @@
     loading = true;
     error = null;
     try {
+      const globalSettings = await weatherService.loadWeatherSettings();
+
       if (location) {
         const [city, country] = location.split(',').map((s: string) => s.trim());
-        weatherData = await weatherService.fetchWeather(city, country || '');
+        const resolved = resolveWeatherLocation(city, country);
+        weatherData = await weatherService.fetchWeather(resolved.city, resolved.country);
+      } else if (globalSettings.force_use_location) {
+        weatherData = await weatherService.fetchWeather(
+          globalSettings.weather_city,
+          globalSettings.weather_country ?? '',
+        );
       } else {
         weatherData = await weatherService.fetchWeatherWithIP();
       }

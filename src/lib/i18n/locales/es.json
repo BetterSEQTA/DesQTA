@@ -639,7 +639,7 @@
     "show_weather_widget": "Mostrar Widget del Clima",
     "only_fallback_location": "Solo usar Ubicación de Respaldo para el Clima",
     "fallback_city": "Ciudad de Respaldo:",
-    "city_placeholder": "Perth",
+    "city_placeholder": "Adelaide",
     "fallback_country_code": "Código de País de Respaldo",
     "country_placeholder": "AU",
     "dashboard_shortcuts": "Atajos del Panel",

@@ -691,7 +691,7 @@
     "show_weather_widget": "Показать виджет погоды",
     "only_fallback_location": "Использовать только резервное местоположение для погоды",
     "fallback_city": "Резервный город:",
-    "city_placeholder": "Perth",
+    "city_placeholder": "Adelaide",
     "fallback_country_code": "Резервный код страны",
     "country_placeholder": "AU",
     "dashboard_shortcuts": "Ярлыки панели",

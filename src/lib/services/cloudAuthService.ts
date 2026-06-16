@@ -33,6 +33,7 @@ export interface CloudUser {
   username: string;
   displayName: string;
   pfpUrl?: string | null;
+  pfpHash?: string | null;
   is_admin?: number | null;
 }
 
@@ -193,6 +194,11 @@ export const cloudAuthService = {
    * Logs out the user from the current profile.
    */
   async logout() {
+    const user = await this.getUser();
+    if (user?.id) {
+      const { clearCloudPfpCache } = await import('./cloudPfpCache');
+      await clearCloudPfpCache(user.id);
+    }
     await invoke('clear_cloud_token');
     cloudUserStore.set(null);
   },
@@ -203,12 +209,34 @@ export const cloudAuthService = {
    */
   async invalidateCloudSessionAfterAuthError(): Promise<void> {
     try {
+      const user = await this.getUser();
+      if (user?.id) {
+        const { clearCloudPfpCache } = await import('./cloudPfpCache');
+        await clearCloudPfpCache(user.id);
+      }
       await invoke('clear_expired_cloud_session');
     } catch {
       /* ignore disk errors */
     }
     cloudUserStore.set(null);
     await checkCloudSignOutAlert();
+  },
+
+  /**
+   * Merge partial user fields into stored cloud session (e.g. after PFP upload).
+   */
+  async updateStoredUser(partial: Partial<CloudUser>): Promise<CloudUser | null> {
+    const stored = await invoke<CloudUserWithToken>('get_cloud_user');
+    if (!stored.user || !stored.token) return null;
+
+    const updated: CloudUser = { ...stored.user, ...partial };
+    await invoke<CloudUser>('save_cloud_token', {
+      token: stored.token,
+      refreshToken: stored.refresh_token ?? null,
+      userJson: JSON.stringify(normalizeUserForBackend(updated)),
+    });
+    cloudUserStore.set(updated);
+    return updated;
   },
 
   /**
@@ -411,6 +439,7 @@ function normalizeUserForBackend(user: CloudUser): Record<string, unknown> {
     username: user.username,
     displayName: user.displayName,
     pfpUrl: user.pfpUrl ?? null,
+    pfpHash: user.pfpHash ?? null,
     is_admin: user.is_admin ?? null,
   };
 }

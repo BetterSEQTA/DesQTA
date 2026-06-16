@@ -15,10 +15,14 @@ export interface SettingsSyncInitServerMeta {
   settings_updated_at: string | null;
 }
 
+export type SettingsSyncInitFormat = 'patch' | 'full';
+
 export interface SettingsSyncInitResponse {
   status: SettingsSyncInitStatus;
   server: SettingsSyncInitServerMeta;
   settings: Record<string, unknown> | null;
+  /** `patch` = sparse delta; `full` or absent = legacy full document. */
+  settings_format?: SettingsSyncInitFormat;
 }
 
 /**
@@ -117,7 +121,7 @@ async function normalizePostSettingsResponse(raw: unknown): Promise<Record<strin
     if (typeof rev === 'number' && Number.isFinite(rev)) {
       await persistCloudSettingsServerMeta(rev, at ?? null);
     }
-    const { ok: _ok, server: _server, ...settings } = o;
+    const { ok: _ok, server: _server, patch: _patch, ...settings } = o;
     return settings as Record<string, unknown>;
   }
   return o as Record<string, unknown>;
@@ -158,6 +162,7 @@ export const cloudSettingsService = {
       settings_revision: number;
       settings_updated_at?: string | null;
       device_timezone?: string;
+      settings: Record<string, unknown>;
     };
   }): Promise<SettingsSyncInitResponse | null> {
     const token = await cloudAuthService.getToken();
@@ -208,11 +213,15 @@ export const cloudSettingsService = {
       settings_revision: number;
       settings_updated_at?: string | null;
       device_timezone?: string;
+      settings: Record<string, unknown>;
     };
   }> {
-    const subset = await invoke<Record<string, unknown>>('get_settings_subset', {
-      keys: ['cloud_settings_server_revision', 'cloud_settings_server_updated_at'],
-    });
+    const [subset, settings] = await Promise.all([
+      invoke<Record<string, unknown>>('get_settings_subset', {
+        keys: ['cloud_settings_server_revision', 'cloud_settings_server_updated_at'],
+      }),
+      invoke<Record<string, unknown>>('get_cloud_sync_settings'),
+    ]);
     const revRaw = subset.cloud_settings_server_revision;
     const rev =
       typeof revRaw === 'number' && Number.isFinite(revRaw) && revRaw >= 0
@@ -239,6 +248,7 @@ export const cloudSettingsService = {
         settings_revision: rev,
         ...(settings_updated_at !== undefined ? { settings_updated_at } : {}),
         ...(device_timezone ? { device_timezone } : {}),
+        settings,
       },
     };
   },
