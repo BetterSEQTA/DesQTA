@@ -358,12 +358,12 @@ async function prefetchTodayNotices(): Promise<void> {
     if (Array.isArray(data?.payload)) {
       const notices = data.payload.map((n: any, i: number) => ({
         id: i + 1,
-        title: n.title,
-        subtitle: n.label_title,
+        title: n.title.replace(/\[\[theme::[^\]]+\]\]/g, ''),
+        subtitle: n.label_title.replace(/\[\[theme::[^\]]+\]\]/g, ''),
         author: n.staff,
         color: n.colour,
         labelId: n.label,
-        content: n.contents,
+        content: n.contents.replace(/\[\[theme::[^\]]+\]\]/g, ''),
       }));
       cache.set(key, notices, 30); // 30 min TTL
       await setIdb(key, notices);

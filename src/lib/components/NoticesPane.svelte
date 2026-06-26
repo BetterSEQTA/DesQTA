@@ -108,12 +108,12 @@
       if (Array.isArray(data?.payload)) {
         const fetchedNotices = data.payload.map((n: any, i: number) => ({
           id: i + 1,
-          title: n.title,
-          subtitle: n.label_title,
+          title: n.title.replace(/\[\[theme::[^\]]+\]\]/g, ''),
+          subtitle: n.label_title.replace(/\[\[theme::[^\]]+\]\]/g, ''),
           author: n.staff,
           color: n.colour,
           labelId: n.label,
-          content: n.contents,
+          content: n.contents.replace(/\[\[theme::[^\]]+\]\]/g, ''),
         }));
         notices = fetchedNotices.slice(0, 10);
         // Always cache the data (for offline use), even when online
@@ -162,7 +162,8 @@
       <Icon
         src={Bell}
         class="w-4 h-4 sm:w-5 sm:h-5 text-accent-600 dark:text-accent-400 transition-all duration-300" />
-      <h3 class="text-base sm:text-lg font-semibold text-zinc-900 dark:text-white transition-all duration-300">
+      <h3
+        class="text-base sm:text-lg font-semibold text-zinc-900 dark:text-white transition-all duration-300">
         {$_('navigation.notices')}
       </h3>
     </div>
@@ -202,11 +203,14 @@
                 class:text-black={!isColorDark(getLabelColor(notice.labelId))}>
                 {getLabelTitle(notice.labelId)}
               </span>
-              <span class="text-xs text-zinc-600 dark:text-zinc-400 uppercase tracking-wide shrink-0">
+              <span
+                class="text-xs text-zinc-600 dark:text-zinc-400 uppercase tracking-wide shrink-0">
                 {notice.author}
               </span>
             </div>
-            <h4 class="font-semibold text-sm mb-1 line-clamp-1 text-zinc-900 dark:text-white">{notice.title}</h4>
+            <h4 class="font-semibold text-sm mb-1 line-clamp-1 text-zinc-900 dark:text-white">
+              {notice.title}
+            </h4>
             <div class="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2">
               {@html notice.content}
             </div>

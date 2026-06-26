@@ -108,12 +108,12 @@
         if (Array.isArray(data?.payload)) {
           return data.payload.map((n: any, i: number) => ({
             id: i + 1,
-            title: n.title,
-            subtitle: n.label_title,
+            title: n.title.replace(/\[\[theme::[^\]]+\]\]/g, ''), // remove all unnecessary theme strings
+            subtitle: n.label_title.replace(/\[\[theme::[^\]]+\]\]/g, ''),
             author: n.staff,
             color: n.colour,
             labelId: n.label,
-            content: n.contents,
+            content: n.contents.replace(/\[\[theme::[^\]]+\]\]/g, ''),
           }));
         }
         return [];
@@ -130,11 +130,10 @@
     if (!data) {
       loading = false;
       const offline = await isOfflineMode();
-      error =
-        offline
-          ? ($_('notices.offline_no_cache') ||
-            'No cached notices available. Please go online to fetch notices.')
-          : ($_('notices.failed_to_load') || 'Failed to load notices.');
+      error = offline
+        ? $_('notices.offline_no_cache') ||
+          'No cached notices available. Please go online to fetch notices.'
+        : $_('notices.failed_to_load') || 'Failed to load notices.';
       notices = [];
     }
   }
@@ -258,7 +257,11 @@
               {labels.find((l) => l.id === selectedLabel)?.title || ''}
             {/if}
           </span>
-          <Icon src={ChevronDown} class="w-4 h-4 shrink-0 text-zinc-500 transition-transform duration-200 {showLabelDropdown ? 'rotate-180' : ''}" />
+          <Icon
+            src={ChevronDown}
+            class="w-4 h-4 shrink-0 text-zinc-500 transition-transform duration-200 {showLabelDropdown
+              ? 'rotate-180'
+              : ''}" />
         </button>
         {#if showLabelDropdown}
           <div
@@ -269,7 +272,8 @@
               type="button"
               role="option"
               aria-selected={selectedLabel === null}
-              class="flex gap-2 items-center w-full px-3 py-2 text-left text-sm transition-colors {selectedLabel === null
+              class="flex gap-2 items-center w-full px-3 py-2 text-left text-sm transition-colors {selectedLabel ===
+              null
                 ? 'bg-accent-500/10 text-accent-600 dark:text-accent-400 font-medium'
                 : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'}"
               onclick={async () => {
@@ -280,7 +284,8 @@
                   date: formatDate(selectedDate),
                 });
               }}>
-              <span class="w-4 shrink-0 flex justify-center">{selectedLabel === null ? '✓' : ''}</span>
+              <span class="w-4 shrink-0 flex justify-center"
+                >{selectedLabel === null ? '✓' : ''}</span>
               <T key="notices.all" fallback="All" />
             </button>
             {#each labels as label}
