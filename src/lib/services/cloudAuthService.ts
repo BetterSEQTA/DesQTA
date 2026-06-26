@@ -2,6 +2,7 @@ import { writable } from 'svelte/store';
 import { invoke } from '@tauri-apps/api/core';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { checkCloudSignOutAlert } from './cloudSignOutAlertService';
+import { getDeviceName } from '$lib/utils/deviceName';
 
 const API_URL = 'https://accounts.betterseqta.org';
 const DESQTA_REDIRECT_URI = 'desqta://auth/callback';
@@ -127,6 +128,8 @@ export const cloudAuthService = {
    * Retries with a fresh client_id if the stored one has expired.
    */
   async login(login: string, password: string) {
+    const deviceName = await getDeviceName();
+
     const doLogin = async (clientId: string, redirectUri: string) => {
       const response = await fetch(`${API_URL}/api/desqta/login`, {
         method: 'POST',
@@ -136,6 +139,7 @@ export const cloudAuthService = {
           redirect_uri: redirectUri,
           login,
           password,
+          device_name: deviceName,
         }),
       });
       if (!response.ok) {
