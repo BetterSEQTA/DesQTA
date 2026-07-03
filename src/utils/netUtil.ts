@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { isDevTauriPerformance } from '$lib/performance/devTauriContext';
 import { devRecordMetric } from '$lib/performance/devPerfHelpers';
+import { dispatchSessionInvalid, isSessionAuthError } from '$lib/utils/sessionAuth';
 
 export type SeqtaRequestInit = {
   method?: 'GET' | 'POST';
@@ -149,6 +150,11 @@ export async function seqtaFetch(input: string, init?: SeqtaRequestInit): Promis
 
       return response;
     } catch (error) {
+      const message =
+        typeof error === 'string' ? error : ((error as Error)?.message ?? 'Unknown fetch error');
+      if (isSessionAuthError(message)) {
+        dispatchSessionInvalid();
+      }
       if (isDevTauriPerformance()) {
         void devRecordMetric(
           'network_seqta_fetch_failed',
@@ -162,9 +168,7 @@ export async function seqtaFetch(input: string, init?: SeqtaRequestInit): Promis
           },
         );
       }
-      throw new Error(
-        typeof error === 'string' ? error : ((error as Error)?.message ?? 'Unknown fetch error'),
-      );
+      throw new Error(message);
     }
   })();
 
