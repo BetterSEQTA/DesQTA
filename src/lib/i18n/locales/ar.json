@@ -215,7 +215,12 @@
     "step6_desc": "Return to DesQTA and use the \"Upload QR Code\" button to select and upload your saved QR code image. DesQTA will automatically log you in!",
     "help_title": "Need More Help?",
     "help_desc": "If you can't find the \"Connect Mobile App\" option, it might be called something different at your school, such as:",
-    "help_options": ["Mobile Device Registration", "App Setup", "QR Code Setup", "Connect Device"],
+    "help_options": [
+      "Mobile Device Registration",
+      "App Setup",
+      "QR Code Setup",
+      "Connect Device"
+    ],
     "help_contact": "Contact your school's IT support if you still can't locate this option.",
     "got_it": "Got it, thanks!"
   },
@@ -284,7 +289,8 @@
     "no_lessons_today": "No lessons today!",
     "enjoy_free_time": "Enjoy your free time or check your other tasks.",
     "view_assessment": "View Assessment",
-    "view_course": "View Course"
+    "view_course": "View Course",
+    "no_lessons_on_day": "لا توجد حصص في هذا اليوم"
   },
   "courses": {
     "back_to_subjects": "Back to subjects",
@@ -655,7 +661,7 @@
   },
   "settings": {
     "saved": "Saved!",
-    "saving": "Saving...",
+    "saving": "جاري الحفظ...",
     "save_changes": "Save Changes",
     "loading_settings": "Loading settings...",
     "personal_preferences": "Personal Preferences",
@@ -674,7 +680,6 @@
     "crop": "قص",
     "crop_profile_picture": "قص صورة الملف الشخصي",
     "save_crop": "حفظ",
-    "saving": "جاري الحفظ...",
     "uploading": "Uploading...",
     "upload": "Upload",
     "language": "Language",
@@ -766,7 +771,20 @@
     "apply": "Apply",
     "no_themes_found": "No themes found",
     "try_adjusting_filters": "Try adjusting your search or filter criteria.",
-    "clear_filters": "Clear Filters"
+    "clear_filters": "Clear Filters",
+    "sections_title": "الأقسام",
+    "developer_settings": "إعدادات المطور",
+    "rss_feeds": "خلاصات RSS",
+    "updates": "التحديثات",
+    "troubleshooting": "استكشاف الأخطاء",
+    "cache_management": "إدارة ذاكرة التخزين المؤقت",
+    "unsaved_changes_title": "تغييرات غير محفوظة",
+    "unsaved_changes_message": "لديك تغييرات غير محفوظة. هل أنت متأكد أنك تريد المغادرة؟ سيتم فقدان التغييرات.",
+    "save_and_leave": "حفظ والمغادرة",
+    "discard_changes": "تجاهل التغييرات",
+    "discard_changes_confirm_title": "تجاهل التغييرات؟",
+    "discard_changes_confirm_message": "سيتم فقدان التعديلات غير المحفوظة. لا يمكن التراجع عن ذلك.",
+    "confirm_discard": "نعم، تجاهل"
   },
   "analytics": {
     "description": "تتبع أدائك الأكاديمي وتقدمك مع مرور الوقت",

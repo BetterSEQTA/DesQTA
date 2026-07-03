@@ -289,7 +289,8 @@
     "no_lessons_today": "Сегодня нет уроков!",
     "enjoy_free_time": "Наслаждайтесь свободным временем или проверьте другие задачи.",
     "view_assessment": "Просмотр оценки",
-    "view_course": "Просмотр курса"
+    "view_course": "Просмотр курса",
+    "no_lessons_on_day": "Нет уроков в этот день"
   },
   "courses": {
     "back_to_subjects": "Вернуться к предметам",
@@ -679,7 +680,6 @@
     "crop": "Обрезать",
     "crop_profile_picture": "Обрезать фото профиля",
     "save_crop": "Сохранить",
-    "saving": "Сохранение...",
     "uploading": "Загрузка...",
     "upload": "Загрузить",
     "language": "Язык",
@@ -771,7 +771,20 @@
     "apply": "Применить",
     "no_themes_found": "Темы не найдены",
     "try_adjusting_filters": "Попробуйте настроить критерии поиска или фильтрации.",
-    "clear_filters": "Очистить фильтры"
+    "clear_filters": "Очистить фильтры",
+    "sections_title": "Разделы",
+    "developer_settings": "Настройки разработчика",
+    "rss_feeds": "RSS-ленты",
+    "updates": "Обновления",
+    "troubleshooting": "Устранение неполадок",
+    "cache_management": "Управление кэшем",
+    "unsaved_changes_title": "Несохранённые изменения",
+    "unsaved_changes_message": "У вас есть несохранённые изменения. Вы уверены, что хотите выйти? Изменения будут потеряны.",
+    "save_and_leave": "Сохранить и выйти",
+    "discard_changes": "Отменить изменения",
+    "discard_changes_confirm_title": "Отменить изменения?",
+    "discard_changes_confirm_message": "Несохранённые изменения будут потеряны. Это нельзя отменить.",
+    "confirm_discard": "Да, отменить"
   },
   "analytics": {
     "description": "Отслеживайте свою академическую успеваемость и прогресс с течением времени",

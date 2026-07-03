@@ -274,6 +274,9 @@ export function calculateTimeBounds(lessons: TimetableLesson[]): TimeRange {
 
 export const TIMETABLE_DEFAULT_TIME_RANGE: TimeRange = { start: '08:00', end: '16:00' };
 
+/** Neutral gray for lessons/events without a configured subject colour (zinc-500). */
+export const TIMETABLE_DEFAULT_LESSON_COLOUR = '#71717a';
+
 /**
  * Week grid bounds (SEQTA-style hourly axis + lesson-relative scale):
  * Earliest→latest lesson, 5% padding, then snap only to enclosing whole hours — no extra ±1h bleed,
@@ -514,7 +517,7 @@ export function timetableLessonsFromSeqtaEventsRows(
     const code = pickSeqtaString(r, ['code']) || desc.slice(0, 32) || 'EVENT';
     const colourPrefName = `timetable.subject.colour.${code}`;
     const subjectColour = colours.find((c) => c.name === colourPrefName);
-    const color = subjectColour ? subjectColour.value : 'var(--accent)';
+    const color = subjectColour ? subjectColour.value : TIMETABLE_DEFAULT_LESSON_COLOUR;
 
     const dateObj = parseDate(dateStr);
     const dayIdx = getDayIndex(dateObj);

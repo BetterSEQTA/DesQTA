@@ -18,10 +18,11 @@
   import { Button } from '$lib/components/ui';
   import T from './T.svelte';
   import { _ } from '../i18n';
+  import { TIMETABLE_DEFAULT_LESSON_COLOUR } from '../utils/timetableUtils';
 
   const studentId = 69; //! literally changes nothing but was used in the original seqta code.
 
-  let currentSelectedDate: Date = $state(new Date());
+  let currentSelectedDate: Date = $state(startOfLocalDay(new Date()));
 
   let lessons = $state<any[]>([]);
   let lessonColours = $state<any[]>([]);
@@ -30,6 +31,31 @@
   let scheduleFitWidthInWidget = $state(true);
 
   let lessonInterval: ReturnType<typeof setInterval> | null = null;
+
+  function startOfLocalDay(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+  function daysFromToday(selected: Date): number {
+    const today = startOfLocalDay(new Date());
+    const target = startOfLocalDay(selected);
+    return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+  }
+
+  let scheduleDayOffset = $derived(daysFromToday(currentSelectedDate));
+  let isViewingToday = $derived(scheduleDayOffset === 0);
+
+  let lessonsSubtitle = $derived.by(() => {
+    if (scheduleDayOffset === 0) return $_('dashboard.todays_lessons') || "Today's Lessons";
+    if (scheduleDayOffset === 1) return $_('dashboard.tomorrows_lessons') || "Tomorrow's Lessons";
+    if (scheduleDayOffset === -1) return $_('dashboard.yesterdays_lessons') || "Yesterday's Lessons";
+    return currentSelectedDate.toLocaleDateString('en-AU', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    });
+  });
 
   function formatDate(date: Date): string {
     const y = date.getFullYear();
@@ -67,7 +93,7 @@
         const colourPrefName = `timetable.subject.colour.${lesson.code}`;
         const subjectColour = colours.find((c: any) => c.name === colourPrefName);
 
-        lesson.colour = subjectColour ? `${subjectColour.value}` : `var(--accent)`;
+        lesson.colour = subjectColour ? `${subjectColour.value}` : TIMETABLE_DEFAULT_LESSON_COLOUR;
 
         lesson.from = lesson.from.substring(0, 5);
         lesson.until = lesson.until.substring(0, 5);
@@ -93,41 +119,46 @@
 
   function checkCurrentLessons() {
     const now = new Date();
+    const selectedDay = startOfLocalDay(currentSelectedDate);
     lessons = lessons.map((l: any) => {
       const [sh, sm] = l.from.split(':').map(Number);
       const [eh, em] = l.until.split(':').map(Number);
 
-      const start = new Date(currentSelectedDate);
+      const start = new Date(selectedDay);
       start.setHours(sh, sm, 0, 0);
-      const end = new Date(currentSelectedDate);
+      const end = new Date(selectedDay);
       end.setHours(eh, em, 0, 0);
 
-      l.active =
-        now >= start && now <= end && now.toDateString() === currentSelectedDate.toDateString();
+      l.active = isViewingToday && now >= start && now <= end;
       return l;
     });
   }
 
   function prevDay() {
-    currentSelectedDate = new Date(currentSelectedDate.valueOf() - 86_400_000);
+    const d = startOfLocalDay(currentSelectedDate);
+    d.setDate(d.getDate() - 1);
+    currentSelectedDate = d;
     loadLessons();
   }
 
   function nextDay() {
-    currentSelectedDate = new Date(currentSelectedDate.valueOf() + 86_400_000);
+    const d = startOfLocalDay(currentSelectedDate);
+    d.setDate(d.getDate() + 1);
+    currentSelectedDate = d;
     loadLessons();
   }
 
   function onDateChange(event: Event) {
     const target = event.target as HTMLInputElement;
     if (target.value) {
-      currentSelectedDate = new Date(target.value);
+      const [y, m, day] = target.value.split('-').map(Number);
+      currentSelectedDate = new Date(y, m - 1, day);
       loadLessons();
     }
   }
 
   function goToToday() {
-    currentSelectedDate = new Date();
+    currentSelectedDate = startOfLocalDay(new Date());
     loadLessons();
   }
 
@@ -141,20 +172,6 @@
       return formatDate(new Date(date));
     }
     return formatDate(date);
-  }
-
-  function lessonsSubtitle() {
-    const today = new Date();
-    const diff = ~~((today.getTime() - currentSelectedDate.getTime()) / 86_400_000);
-    if (diff === 0) return $_('dashboard.todays_lessons') || "Today's Lessons";
-    if (diff === -1) return $_('dashboard.tomorrows_lessons') || "Tomorrow's Lessons";
-    if (diff === 1) return $_('dashboard.yesterdays_lessons') || "Yesterday's Lessons";
-    return currentSelectedDate.toLocaleDateString('en-AU', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-    });
   }
 
   onMount(async () => {
@@ -179,7 +196,7 @@
   class="flex flex-col h-full w-full min-h-0 overflow-hidden rounded-2xl border shadow-xl backdrop-blur-xs bg-white/80 dark:bg-zinc-800/30 border-zinc-300/50 dark:border-zinc-700/50">
   <div
     class="flex flex-col gap-3 sm:gap-4 justify-between items-start px-3 py-3 shrink-0 bg-linear-to-r border-b sm:flex-row sm:items-center sm:px-4 border-zinc-300/50 dark:border-zinc-700/50 from-zinc-100/70 dark:from-zinc-800/70 to-zinc-100/30 dark:to-zinc-800/30">
-    <span class="text-xl font-semibold text-zinc-900 dark:text-white shrink-0">{lessonsSubtitle()}</span>
+    <span class="text-xl font-semibold text-zinc-900 dark:text-white shrink-0">{lessonsSubtitle}</span>
     <!-- Mobile: date + Today + nav on one row for more vertical space for lessons -->
     <div class="flex flex-row flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
       <!-- Date Picker + Today Button (side by side on mobile) -->
@@ -197,7 +214,8 @@
         </div>
         <button
           onclick={goToToday}
-          class="shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg border transition-all duration-200 text-zinc-700 dark:text-zinc-300 bg-zinc-200/70 dark:bg-zinc-800/70 hover:accent-bg-hover hover:text-white border-zinc-300/50 dark:border-zinc-700/50 hover:accent-border"
+          disabled={isViewingToday}
+          class="shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg border transition-all duration-200 text-zinc-700 dark:text-zinc-300 bg-zinc-200/70 dark:bg-zinc-800/70 hover:accent-bg-hover hover:text-white border-zinc-300/50 dark:border-zinc-700/50 hover:accent-border disabled:opacity-50 disabled:pointer-events-none disabled:hover:text-zinc-700 dark:disabled:hover:text-zinc-300"
           title={$_('dashboard.go_to_today') || 'Go to today'}>
           <T key="dashboard.today" fallback="Today" />
         </button>
@@ -238,7 +256,11 @@
       </div>
       <div class="flex flex-col items-center">
         <p class="mb-2 text-2xl font-bold text-center text-zinc-800 dark:text-white">
-          <T key="dashboard.no_lessons_today" fallback="No lessons today!" />
+          {#if isViewingToday}
+            <T key="dashboard.no_lessons_today" fallback="No lessons today!" />
+          {:else}
+            <T key="dashboard.no_lessons_on_day" fallback="No lessons on this day" />
+          {/if}
         </p>
         <p class="text-lg text-center text-zinc-600 dark:text-zinc-300">
           <T

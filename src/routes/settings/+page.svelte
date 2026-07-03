@@ -69,6 +69,9 @@
   import Modal from '../../lib/components/Modal.svelte';
   import ProfilePictureCropModal from '../../lib/components/ProfilePictureCropModal.svelte';
   import CustomBackgroundSettings from '../../lib/components/settings/CustomBackgroundSettings.svelte';
+  import SettingsSectionNav, {
+    type SettingsSectionItem,
+  } from '../../lib/components/settings/SettingsSectionNav.svelte';
   import CloudPfpAvatar from '../../lib/components/CloudPfpAvatar.svelte';
   import { afterProfilePictureChange } from '../../lib/services/cloudPfpSyncService';
 
@@ -134,13 +137,175 @@
   let isDesktop = $state(false);
   let showSidebarSettingsDialog = $state(false);
   let showUnsavedChangesModal = $state(false);
+  let unsavedModalStep = $state<'leave' | 'confirm-discard'>('leave');
   let pendingNavigationUrl: string | null = null;
+  let activeSectionId = $state<string | null>(null);
+  let sectionObserver: IntersectionObserver | null = null;
   let resettingOnboarding = $state(false);
   let biometricEnabled = $state(false);
   let biometricToggleLoading = $state(false);
   let biometricToggleError = $state<string | null>(null);
 
   let supportsBiometric = $derived($platformStore.supportsBiometric);
+
+  type SettingsSectionDef = SettingsSectionItem & {
+    getVisible: () => boolean;
+  };
+
+  const SETTINGS_SECTION_DEFS: SettingsSectionDef[] = [
+    {
+      id: 'developer',
+      labelKey: 'settings.developer_settings',
+      fallback: 'Developer Settings',
+      getVisible: () => showDevSettings,
+    },
+    {
+      id: 'cloud-sync',
+      labelKey: 'settings.cloud_sync',
+      fallback: 'Cloud Sync',
+      getVisible: () => true,
+    },
+    {
+      id: 'personal',
+      labelKey: 'settings.personal_settings',
+      fallback: 'Personal Settings',
+      getVisible: () => true,
+    },
+    {
+      id: 'homepage',
+      labelKey: 'settings.homepage',
+      fallback: 'Homepage',
+      getVisible: () => true,
+    },
+    {
+      id: 'dashboard-shortcuts',
+      labelKey: 'settings.dashboard_shortcuts',
+      fallback: 'Dashboard Shortcuts',
+      getVisible: () => true,
+    },
+    {
+      id: 'appearance',
+      labelKey: 'settings.appearance',
+      fallback: 'Appearance',
+      getVisible: () => true,
+    },
+    {
+      id: 'security',
+      labelKey: 'settings.security',
+      fallback: 'Security',
+      getVisible: () => supportsBiometric,
+    },
+    {
+      id: 'zoom',
+      labelKey: 'settings.zoom',
+      fallback: 'Interface Zoom',
+      getVisible: () => true,
+    },
+    {
+      id: 'notifications',
+      labelKey: 'settings.notifications',
+      fallback: 'Notifications',
+      getVisible: () => true,
+    },
+    {
+      id: 'rss-feeds',
+      labelKey: 'settings.rss_feeds',
+      fallback: 'RSS Feeds',
+      getVisible: () => true,
+    },
+    {
+      id: 'ai-features',
+      labelKey: 'settings.ai_features',
+      fallback: 'AI Features',
+      getVisible: () => true,
+    },
+    {
+      id: 'plugins',
+      labelKey: 'settings.plugins',
+      fallback: 'Plugins',
+      getVisible: () => true,
+    },
+    {
+      id: 'updates',
+      labelKey: 'settings.updates',
+      fallback: 'Updates',
+      getVisible: () => isDesktop,
+    },
+    {
+      id: 'redo-onboarding',
+      labelKey: 'settings.redo_onboarding',
+      fallback: 'Redo Walkthrough',
+      getVisible: () => true,
+    },
+    {
+      id: 'whats-new',
+      labelKey: 'whats_new.title',
+      fallback: "What's New",
+      getVisible: () => true,
+    },
+    {
+      id: 'troubleshooting',
+      labelKey: 'settings.troubleshooting',
+      fallback: 'Troubleshooting',
+      getVisible: () => true,
+    },
+    {
+      id: 'cache-management',
+      labelKey: 'settings.cache_management',
+      fallback: 'Cache Management',
+      getVisible: () => true,
+    },
+  ];
+
+  let visibleSections = $derived(
+    SETTINGS_SECTION_DEFS.filter((s) => s.getVisible()).map(({ id, labelKey, fallback }) => ({
+      id,
+      labelKey,
+      fallback,
+    })),
+  );
+
+  let unsavedChangesModalTitle = $derived(
+    unsavedModalStep === 'confirm-discard'
+      ? $_('settings.discard_changes_confirm_title', { default: 'Discard changes?' })
+      : $_('settings.unsaved_changes_title', { default: 'Unsaved Changes' }),
+  );
+
+  function scrollToSettingsSection(id: string) {
+    document.getElementById(`settings-section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    activeSectionId = id;
+  }
+
+  function setupSectionObserver() {
+    sectionObserver?.disconnect();
+    if (loading || visibleSections.length === 0) return;
+
+    sectionObserver = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length > 0) {
+          const id = visible[0].target.id.replace('settings-section-', '');
+          activeSectionId = id;
+        }
+      },
+      { root: null, rootMargin: '-120px 0px -55% 0px', threshold: 0 },
+    );
+
+    for (const section of visibleSections) {
+      const el = document.getElementById(`settings-section-${section.id}`);
+      if (el) sectionObserver.observe(el);
+    }
+  }
+
+  $effect(() => {
+    visibleSections;
+    loading;
+    if (!loading) {
+      queueMicrotask(() => setupSectionObserver());
+    }
+  });
 
   async function handleBiometricToggle(e: MouseEvent) {
     e.preventDefault();
@@ -840,11 +1005,50 @@ The Company reserves the right to terminate your access to the Service at any ti
     pendingNavigationUrl = to.url.pathname + (to.url.search || '');
 
     // Show the confirmation modal
+    unsavedModalStep = 'leave';
     showUnsavedChangesModal = true;
   });
 
+  function restoreInitialSettings() {
+    if (!initialSettings) return;
+
+    shortcuts = JSON.parse(JSON.stringify(initialSettings.shortcuts));
+    feeds = JSON.parse(JSON.stringify(initialSettings.feeds));
+    weatherEnabled = initialSettings.weatherEnabled;
+    weatherCity = initialSettings.weatherCity;
+    weatherCountry = initialSettings.weatherCountry;
+    remindersEnabled = initialSettings.remindersEnabled;
+    autoDismissMessageNotifications = initialSettings.autoDismissMessageNotifications;
+    forceUseLocation = initialSettings.forceUseLocation;
+    accentColor.set(initialSettings.accentColor);
+    theme.set(initialSettings.theme as 'dark' | 'light' | 'system');
+    disableSchoolPicture = initialSettings.disableSchoolPicture;
+    enhancedAnimations = initialSettings.enhancedAnimations;
+    geminiApiKey = initialSettings.geminiApiKey;
+    cerebrasApiKey = initialSettings.cerebrasApiKey;
+    aiProvider = initialSettings.aiProvider;
+    aiIntegrationsEnabled = initialSettings.aiIntegrationsEnabled;
+    lessonSummaryAnalyserEnabled = initialSettings.lessonSummaryAnalyserEnabled;
+    quizGeneratorEnabled = initialSettings.quizGeneratorEnabled;
+    autoCollapseSidebar = initialSettings.autoCollapseSidebar;
+    autoExpandSidebarHover = initialSettings.autoExpandSidebarHover;
+    globalSearchEnabled = initialSettings.globalSearchEnabled;
+    minimizeToTray = initialSettings.minimizeToTray;
+    devSensitiveInfoHider = initialSettings.devSensitiveInfoHider;
+    devForceOfflineMode = initialSettings.devForceOfflineMode;
+    acceptedCloudEula = initialSettings.acceptedCloudEula;
+    syncCloudPfp = initialSettings.syncCloudPfp;
+    sendAnonymousUsageStatistics = initialSettings.sendAnonymousUsageStatistics;
+    separateRssFeed = initialSettings.separateRssFeed;
+    dashboardTodayScheduleFitWidth = initialSettings.dashboardTodayScheduleFitWidth;
+    zoomLevel = initialSettings.zoomLevel;
+    biometricEnabled = initialSettings.biometricEnabled;
+    setZoom(zoomLevel);
+  }
+
   async function handleSaveAndLeave() {
     showUnsavedChangesModal = false;
+    unsavedModalStep = 'leave';
     const urlToNavigate = pendingNavigationUrl;
     pendingNavigationUrl = null;
 
@@ -857,9 +1061,29 @@ The Company reserves the right to terminate your access to the Service at any ti
     }
   }
 
-  function handleCancelLeave() {
+  function handleDiscardAndLeave() {
+    restoreInitialSettings();
     showUnsavedChangesModal = false;
+    unsavedModalStep = 'leave';
+    const urlToNavigate = pendingNavigationUrl;
     pendingNavigationUrl = null;
+    if (urlToNavigate) {
+      goto(urlToNavigate);
+    }
+  }
+
+  function handleCancelLeave() {
+    if (unsavedModalStep === 'confirm-discard') {
+      unsavedModalStep = 'leave';
+      return;
+    }
+    showUnsavedChangesModal = false;
+    unsavedModalStep = 'leave';
+    pendingNavigationUrl = null;
+  }
+
+  function handleRequestDiscard() {
+    unsavedModalStep = 'confirm-discard';
   }
 
   let removeMountListeners: (() => void) | null = null;
@@ -879,7 +1103,10 @@ The Company reserves the right to terminate your access to the Service at any ti
     };
   });
 
-  onDestroy(() => removeMountListeners?.());
+  onDestroy(() => {
+    removeMountListeners?.();
+    sectionObserver?.disconnect();
+  });
 
   // Clear browser cache to fix routing issues
   async function clearCache() {
@@ -1178,10 +1405,19 @@ The Company reserves the right to terminate your access to the Service at any ti
       </div>
     </div>
   {:else}
-    <div class="space-y-6 sm:space-y-8">
+    <div class="w-full">
+      <SettingsSectionNav
+        sections={visibleSections}
+        activeId={activeSectionId}
+        variant="chips"
+        onNavigate={scrollToSettingsSection} />
+
+      <div class="flex flex-col xl:flex-row xl:items-start gap-6 xl:gap-8">
+        <div class="flex-1 min-w-0 space-y-6 sm:space-y-8">
       {#if showDevSettings}
         <section
-          class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
+          id="settings-section-developer"
+          class="scroll-mt-28 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
           <div class="px-4 py-4 border-b sm:px-6 border-zinc-300/50 dark:border-zinc-800/50">
             <h2 class="text-base font-semibold sm:text-lg">Developer Settings</h2>
             <p class="text-xs text-zinc-600 sm:text-sm dark:text-zinc-400">
@@ -1257,8 +1493,9 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       <!-- Cloud Sync Section -->
       <section
-        data-onboarding="cloud-sync"
-        class="overflow-hidden relative rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
+        id="settings-section-cloud-sync"
+        class="scroll-mt-28 overflow-hidden relative rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up"
+        data-onboarding="cloud-sync">
         <div class="px-4 py-4 border-b sm:px-6 border-zinc-300/30 dark:border-zinc-800/30">
           <h2 class="text-base font-semibold sm:text-lg text-zinc-500 dark:text-zinc-400">
             <T key="settings.cloud_sync" fallback="Cloud Sync" />
@@ -1461,7 +1698,8 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       <!-- Personal Settings -->
       <section
-        class="overflow-hidden relative rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
+        id="settings-section-personal"
+        class="scroll-mt-28 overflow-hidden relative rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
         <div class="px-4 py-4 border-b sm:px-6 border-zinc-300/30 dark:border-zinc-800/30">
           <h2 class="text-base font-semibold sm:text-lg text-zinc-500 dark:text-zinc-400">
             <T key="settings.personal_settings" fallback="Personal Settings" />
@@ -1545,7 +1783,8 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       <!-- Homepage Settings -->
       <section
-        class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-100 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
+        id="settings-section-homepage"
+        class="scroll-mt-28 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-100 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
         <div class="px-4 py-4 border-b sm:px-6 border-zinc-300/50 dark:border-zinc-800/50">
           <h2 class="text-base font-semibold sm:text-lg">
             <T key="settings.homepage" fallback="Homepage" />
@@ -1643,7 +1882,8 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       <!-- Dashboard Shortcuts Settings -->
       <section
-        class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-150 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
+        id="settings-section-dashboard-shortcuts"
+        class="scroll-mt-28 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-150 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
         <div class="px-4 py-4 border-b sm:px-6 border-zinc-300/50 dark:border-zinc-800/50">
           <h2 class="text-base font-semibold sm:text-lg">
             <T key="settings.dashboard_shortcuts" fallback="Dashboard Shortcuts" />
@@ -1773,7 +2013,8 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       <!-- Appearance Settings -->
       <section
-        class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-100 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
+        id="settings-section-appearance"
+        class="scroll-mt-28 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-100 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
         <div class="px-4 py-4 border-b sm:px-6 border-zinc-300/50 dark:border-zinc-800/50">
           <h2 class="text-base font-semibold sm:text-lg">
             <T key="settings.appearance" fallback="Appearance" />
@@ -2013,7 +2254,8 @@ The Company reserves the right to terminate your access to the Service at any ti
       <!-- Security (biometric) - only when platform supports it -->
       {#if supportsBiometric}
         <section
-          class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-200 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
+          id="settings-section-security"
+          class="scroll-mt-28 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-200 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
           <div class="px-4 py-4 border-b sm:px-6 border-zinc-300/50 dark:border-zinc-800/50">
             <h2 class="text-base font-semibold sm:text-lg">
               <T key="settings.security" fallback="Security" />
@@ -2065,7 +2307,8 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       <!-- Zoom Settings -->
       <section
-        class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-200 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
+        id="settings-section-zoom"
+        class="scroll-mt-28 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-200 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
         <div class="px-4 py-4 border-b sm:px-6 border-zinc-300/50 dark:border-zinc-800/50">
           <h2 class="text-base font-semibold sm:text-lg">
             <T key="settings.zoom" fallback="Interface Zoom" />
@@ -2122,7 +2365,8 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       <!-- Notification Settings -->
       <section
-        class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-200 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
+        id="settings-section-notifications"
+        class="scroll-mt-28 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-200 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
         <div class="px-4 py-4 border-b sm:px-6 border-zinc-300/50 dark:border-zinc-800/50">
           <h2 class="text-base font-semibold sm:text-lg">
             <T key="settings.notifications" fallback="Notifications" />
@@ -2171,7 +2415,8 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       <!-- RSS Feeds Settings -->
       <section
-        class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-200 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
+        id="settings-section-rss-feeds"
+        class="scroll-mt-28 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-200 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
         <div class="px-4 py-4 border-b sm:px-6 border-zinc-300/50 dark:border-zinc-800/50">
           <h2 class="text-base font-semibold sm:text-lg">RSS Feeds</h2>
           <p class="text-xs text-zinc-600 sm:text-sm dark:text-zinc-400">
@@ -2258,7 +2503,8 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       <!-- AI Features -->
       <section
-        class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-100 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
+        id="settings-section-ai-features"
+        class="scroll-mt-28 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-100 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
         <div class="px-4 py-4 border-b sm:px-6 border-zinc-300/50 dark:border-zinc-800/50">
           <h2 class="text-base font-semibold sm:text-lg">
             <T key="settings.ai_features" fallback="AI Features" />
@@ -2386,7 +2632,8 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       <!-- Plugins Section -->
       <section
-        class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
+        id="settings-section-plugins"
+        class="scroll-mt-28 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
         <div class="px-4 py-4 border-b sm:px-6 border-zinc-300/50 dark:border-zinc-800/50">
           <h2 class="text-base font-semibold sm:text-lg">
             <T key="settings.plugins" fallback="Plugins" />
@@ -2416,7 +2663,8 @@ The Company reserves the right to terminate your access to the Service at any ti
       <!-- Check for Updates (Desktop only) -->
       {#if isDesktop}
         <section
-          class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-green-700/50 animate-fade-in-up">
+          id="settings-section-updates"
+          class="scroll-mt-28 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-green-700/50 animate-fade-in-up">
           <div class="p-4 sm:p-6">
             <div class="flex justify-between items-center mb-4">
               <div>
@@ -2469,7 +2717,8 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       <!-- Redo Onboarding -->
       <section
-        class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-purple-700/50 animate-fade-in-up">
+        id="settings-section-redo-onboarding"
+        class="scroll-mt-28 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-purple-700/50 animate-fade-in-up">
         <div class="flex justify-between items-center p-4 sm:p-6">
           <div>
             <h2 class="text-base font-semibold sm:text-lg">
@@ -2501,7 +2750,8 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       <!-- What's New button -->
       <section
-        class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
+        id="settings-section-whats-new"
+        class="scroll-mt-28 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
         <div class="flex justify-between items-center p-4 sm:p-6">
           <div>
             <h2 class="text-base font-semibold sm:text-lg">
@@ -2525,7 +2775,8 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       <!-- Troubleshooting button -->
       <section
-        class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
+        id="settings-section-troubleshooting"
+        class="scroll-mt-28 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-blue-700/50 animate-fade-in-up">
         <div class="flex justify-between items-center p-4 sm:p-6">
           <div>
             <h2 class="text-base font-semibold sm:text-lg">Troubleshooting</h2>
@@ -2544,7 +2795,8 @@ The Company reserves the right to terminate your access to the Service at any ti
 
       <!-- Cache Management -->
       <section
-        class="overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-red-700/50 animate-fade-in-up">
+        id="settings-section-cache-management"
+        class="scroll-mt-28 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xs transition-all duration-300 delay-300 bg-white/80 dark:bg-zinc-900/50 sm:rounded-2xl border-zinc-300/50 dark:border-zinc-800/50 hover:shadow-2xl hover:border-red-700/50 animate-fade-in-up">
         <div class="flex justify-between items-center p-4 sm:p-6">
           <div>
             <h2 class="text-base font-semibold sm:text-lg">Cache Management</h2>
@@ -2562,6 +2814,14 @@ The Company reserves the right to terminate your access to the Service at any ti
           </button>
         </div>
       </section>
+      </div>
+
+      <SettingsSectionNav
+        sections={visibleSections}
+        activeId={activeSectionId}
+        variant="sidebar"
+        onNavigate={scrollToSettingsSection} />
+      </div>
     </div>
   {/if}
 </div>
@@ -2628,37 +2888,62 @@ The Company reserves the right to terminate your access to the Service at any ti
 <!-- Unsaved Changes Confirmation Modal -->
 <Modal
   bind:open={showUnsavedChangesModal}
-  title="Unsaved Changes"
+  title={unsavedChangesModalTitle}
   closeOnBackdrop={false}
   closeOnEscape={true}
   onclose={handleCancelLeave}>
   <div class="px-8 pb-8">
-    <p class="mb-6 text-zinc-600 dark:text-zinc-400">
-      <T
-        key="settings.unsaved_changes_message"
-        fallback="You have unsaved changes. Are you sure you want to leave? Your changes will be lost." />
-    </p>
-    <div class="flex gap-3 justify-end">
-      <button
-        class="px-4 py-2 rounded-lg transition-all duration-200 bg-zinc-200 dark:bg-zinc-700/50 text-zinc-800 dark:text-white hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2"
-        onclick={handleCancelLeave}>
-        <T key="common.cancel" fallback="Cancel" />
-      </button>
-      <button
-        class="px-4 py-2 text-white rounded-lg transition-all duration-200 transform accent-bg hover:accent-bg-hover hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 accent-ring focus:ring-offset-2"
-        onclick={handleSaveAndLeave}
-        disabled={saving}>
-        {#if saving}
-          <div class="flex gap-2 items-center">
-            <div class="w-4 h-4 rounded-full border-2 animate-spin border-white/30 border-t-white">
+    {#if unsavedModalStep === 'confirm-discard'}
+      <p class="mb-6 text-zinc-600 dark:text-zinc-400">
+        <T
+          key="settings.discard_changes_confirm_message"
+          fallback="Your unsaved edits will be lost. This cannot be undone." />
+      </p>
+      <div class="flex gap-3 justify-end">
+        <button
+          class="px-4 py-2 rounded-lg transition-all duration-200 bg-zinc-200 dark:bg-zinc-700/50 text-zinc-800 dark:text-white hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2"
+          onclick={handleCancelLeave}>
+          <T key="common.cancel" fallback="Cancel" />
+        </button>
+        <button
+          class="px-4 py-2 text-white rounded-lg transition-all duration-200 bg-red-500 hover:bg-red-600 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2"
+          onclick={handleDiscardAndLeave}>
+          <T key="settings.confirm_discard" fallback="Yes, discard" />
+        </button>
+      </div>
+    {:else}
+      <p class="mb-6 text-zinc-600 dark:text-zinc-400">
+        <T
+          key="settings.unsaved_changes_message"
+          fallback="You have unsaved changes. Are you sure you want to leave? Your changes will be lost." />
+      </p>
+      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
+        <button
+          class="px-4 py-2 rounded-lg transition-all duration-200 bg-zinc-200 dark:bg-zinc-700/50 text-zinc-800 dark:text-white hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2"
+          onclick={handleCancelLeave}>
+          <T key="common.cancel" fallback="Cancel" />
+        </button>
+        <button
+          class="px-4 py-2 rounded-lg transition-all duration-200 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2"
+          onclick={handleRequestDiscard}>
+          <T key="settings.discard_changes" fallback="Discard changes" />
+        </button>
+        <button
+          class="px-4 py-2 text-white rounded-lg transition-all duration-200 transform accent-bg hover:accent-bg-hover hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 accent-ring focus:ring-offset-2"
+          onclick={handleSaveAndLeave}
+          disabled={saving}>
+          {#if saving}
+            <div class="flex gap-2 items-center">
+              <div class="w-4 h-4 rounded-full border-2 animate-spin border-white/30 border-t-white">
+              </div>
+              <span><T key="settings.saving" fallback="Saving..." /></span>
             </div>
-            <span><T key="settings.saving" fallback="Saving..." /></span>
-          </div>
-        {:else}
-          <T key="settings.save_and_leave" fallback="Save Changes" />
-        {/if}
-      </button>
-    </div>
+          {:else}
+            <T key="settings.save_and_leave" fallback="Save and leave" />
+          {/if}
+        </button>
+      </div>
+    {/if}
   </div>
 </Modal>
 

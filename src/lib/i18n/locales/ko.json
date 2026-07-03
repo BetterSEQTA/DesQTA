@@ -215,7 +215,12 @@
     "step6_desc": "Return to DesQTA and use the \"Upload QR Code\" button to select and upload your saved QR code image. DesQTA will automatically log you in!",
     "help_title": "Need More Help?",
     "help_desc": "If you can't find the \"Connect Mobile App\" option, it might be called something different at your school, such as:",
-    "help_options": ["Mobile Device Registration", "App Setup", "QR Code Setup", "Connect Device"],
+    "help_options": [
+      "Mobile Device Registration",
+      "App Setup",
+      "QR Code Setup",
+      "Connect Device"
+    ],
     "help_contact": "Contact your school's IT support if you still can't locate this option.",
     "got_it": "Got it, thanks!"
   },
@@ -284,7 +289,8 @@
     "no_lessons_today": "No lessons today!",
     "enjoy_free_time": "Enjoy your free time or check your other tasks.",
     "view_assessment": "View Assessment",
-    "view_course": "View Course"
+    "view_course": "View Course",
+    "no_lessons_on_day": "이 날 수업 없음"
   },
   "courses": {
     "back_to_subjects": "Back to subjects",
@@ -655,7 +661,7 @@
   },
   "settings": {
     "saved": "Saved!",
-    "saving": "Saving...",
+    "saving": "저장 중...",
     "save_changes": "Save Changes",
     "loading_settings": "Loading settings...",
     "personal_preferences": "Personal Preferences",
@@ -674,7 +680,6 @@
     "crop": "자르기",
     "crop_profile_picture": "프로필 사진 자르기",
     "save_crop": "저장",
-    "saving": "저장 중...",
     "uploading": "Uploading...",
     "upload": "Upload",
     "language": "Language",
@@ -766,7 +771,20 @@
     "apply": "Apply",
     "no_themes_found": "No themes found",
     "try_adjusting_filters": "Try adjusting your search or filter criteria.",
-    "clear_filters": "Clear Filters"
+    "clear_filters": "Clear Filters",
+    "sections_title": "섹션",
+    "developer_settings": "개발자 설정",
+    "rss_feeds": "RSS 피드",
+    "updates": "업데이트",
+    "troubleshooting": "문제 해결",
+    "cache_management": "캐시 관리",
+    "unsaved_changes_title": "저장되지 않은 변경",
+    "unsaved_changes_message": "저장되지 않은 변경 사항이 있습니다. 정말 나가시겠습니까? 변경 사항이 손실됩니다.",
+    "save_and_leave": "저장하고 나가기",
+    "discard_changes": "변경 사항 취소",
+    "discard_changes_confirm_title": "변경 사항을 취소하시겠습니까?",
+    "discard_changes_confirm_message": "저장되지 않은 편집 내용이 손실됩니다. 되돌릴 수 없습니다.",
+    "confirm_discard": "예, 취소"
   },
   "analytics": {
     "description": "시간에 따른 학업 성과와 진행 상황 추적",

@@ -308,7 +308,12 @@
     "step6_desc": "Return to DesQTA and use the \"Upload QR Code\" button to select and upload your saved QR code image (screenshots of any size work). DesQTA will find the QR and log you in! Supports both SEQTA and BetterSEQTA+ (Settings → Connect Mobile App) QR codes.",
     "help_title": "Need More Help?",
     "help_desc": "If you can't find the \"Connect Mobile App\" option, it might be called something different at your school, such as:",
-    "help_options": ["Mobile Device Registration", "App Setup", "QR Code Setup", "Connect Device"],
+    "help_options": [
+      "Mobile Device Registration",
+      "App Setup",
+      "QR Code Setup",
+      "Connect Device"
+    ],
     "help_contact": "Contact your school's IT support if you still can't locate this option.",
     "got_it": "Got it, thanks!"
   },
@@ -384,7 +389,8 @@
     "no_lessons_today": "No lessons today!",
     "enjoy_free_time": "Enjoy your free time or check your other tasks.",
     "view_assessment": "View Assessment",
-    "view_course": "View Course"
+    "view_course": "View Course",
+    "no_lessons_on_day": "No lessons on this day"
   },
   "courses": {
     "page_description": "Browse courses and access lesson content",
@@ -737,7 +743,6 @@
     "crop": "Crop",
     "crop_profile_picture": "Crop Profile Picture",
     "save_crop": "Save",
-    "saving": "Saving...",
     "uploading": "Uploading...",
     "upload": "Upload",
     "language": "Language",
@@ -863,7 +868,20 @@
     "drag_to_folders": "Drag items below to add them to folders.",
     "drag_items_here": "Drag items here",
     "clear_recent_activity": "Clear Recent Activity",
-    "reset_to_default": "Reset to Default"
+    "reset_to_default": "Reset to Default",
+    "sections_title": "Sections",
+    "developer_settings": "Developer Settings",
+    "rss_feeds": "RSS Feeds",
+    "updates": "Updates",
+    "troubleshooting": "Troubleshooting",
+    "cache_management": "Cache Management",
+    "unsaved_changes_title": "Unsaved Changes",
+    "unsaved_changes_message": "You have unsaved changes. Are you sure you want to leave? Your changes will be lost.",
+    "save_and_leave": "Save and leave",
+    "discard_changes": "Discard changes",
+    "discard_changes_confirm_title": "Discard changes?",
+    "discard_changes_confirm_message": "Your unsaved edits will be lost. This cannot be undone.",
+    "confirm_discard": "Yes, discard"
   },
   "analytics": {
     "description": "Track your academic performance and progress over time",
