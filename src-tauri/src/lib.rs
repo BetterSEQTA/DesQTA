@@ -48,6 +48,8 @@ mod profiles;
 mod migration;
 #[path = "utils/theme_manager.rs"]
 mod theme_manager;
+#[path = "utils/deeplink.rs"]
+mod deeplink;
 #[path = "utils/todolist.rs"]
 mod todolist;
 #[path = "utils/pdf_extract.rs"]
@@ -236,6 +238,9 @@ pub fn run() {
             // Handle deep link in single instance
             if let Some(url) = argv.get(1) {
                 println!("[Desqta] Processing deep link in single instance: {}", url);
+                if deeplink::try_handle_theme_install(app, url) {
+                    return;
+                }
                 if url.starts_with("desqta://auth/callback") {
                     // Handle Discord OAuth callback
                     let mut token = None;
@@ -509,6 +514,7 @@ pub fn run() {
             theme_manager::get_cached_image_path,
             theme_manager::get_cached_image_url,
             theme_manager::invalidate_theme_image_cache,
+            deeplink::take_pending_theme_install,
             theme_store::theme_store_request,
             theme_store::theme_store_list_themes,
             theme_store::theme_store_get_theme,
@@ -697,6 +703,9 @@ pub fn run() {
                 if let Ok(Some(urls)) = app.deep_link().get_current() {
                     for url in urls {
                         let url_str: String = url.to_string();
+                        if deeplink::try_handle_theme_install(app.app_handle(), &url_str) {
+                            break;
+                        }
                         if url_str.starts_with("desqta://connect/") {
                             println!("[Desqta] Processing DesQTA connect deeplink from first launch: {}", url_str);
                             let app_handle = app.app_handle().clone();
@@ -741,6 +750,10 @@ pub fn run() {
                     if let Ok(urls) = serde_json::from_str::<Vec<String>>(payload_str) {
                         for url in urls {
                             println!("[Desqta] Processing URL from deep link: {}", url);
+
+                            if deeplink::try_handle_theme_install(&app_handle, &url) {
+                                continue;
+                            }
                             
                             if url.starts_with("desqta://auth/callback") {
                                 // Handle Discord OAuth callback on mobile

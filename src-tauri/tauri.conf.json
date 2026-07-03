@@ -62,7 +62,7 @@
       },
       "mobile": [
         {
-          "scheme": ["seqtalearn"],
+          "scheme": ["seqtalearn", "desqta"],
           "appLink": false
         }
       ]

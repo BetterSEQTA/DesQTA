@@ -12,6 +12,7 @@
   import PostLoginPrompts from '../lib/components/PostLoginPrompts.svelte';
   import BiometricGate from '../lib/components/BiometricGate.svelte';
   import LoadingScreen from '../lib/components/LoadingScreen.svelte';
+  import ThemePreviewBar from '../lib/components/ThemePreviewBar.svelte';
   import ThemeBuilder from '../lib/components/ThemeBuilder.svelte';
   import { Toaster } from 'svelte-sonner';
   import Onboarding from '../lib/components/Onboarding.svelte';
@@ -200,6 +201,7 @@
 
   let unlistenLayout: (() => void) | undefined;
   let unlistenShowWhatsNew: ((e: Event) => void) | undefined;
+  let unlistenThemeDeeplink: (() => void) | undefined;
 
   const checkSession = async () => {
     await checkSessionAuth({
@@ -219,6 +221,7 @@
     if (unlistenShowWhatsNew) {
       window.removeEventListener('show-whats-new', unlistenShowWhatsNew);
     }
+    unlistenThemeDeeplink?.();
     if (browser && isDevTauriPerformance()) {
       teardownDevTauriPerformanceRuntime();
     }
@@ -474,6 +477,13 @@
     });
 
     shellReady = true;
+
+    try {
+      const { initThemeDeeplinkHandler } = await import('$lib/services/themeDeeplinkService');
+      unlistenThemeDeeplink = await initThemeDeeplinkHandler();
+    } catch (e) {
+      logger.debug('layout', 'onMount', 'Failed to init theme deeplink handler', { error: e });
+    }
 
     try {
       // Load saved language preference
@@ -1072,6 +1082,7 @@
   </div>
 {/if}
 <UploadProgressBar />
+<ThemePreviewBar />
 <Toaster
   position={isMobile ? 'top-center' : 'bottom-right'}
   theme={$theme === 'dark' ? 'dark' : 'light'}

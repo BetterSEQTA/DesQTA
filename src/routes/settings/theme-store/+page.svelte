@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
+  import { onMount } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { platformStore } from '$lib/stores/platform';
 
@@ -13,11 +13,8 @@
   import {
     loadAndApplyTheme,
     currentTheme,
-    startThemePreview,
-    cancelThemePreview,
-    applyPreviewTheme,
-    previewingTheme,
   } from '$lib/stores/theme';
+  import { previewCloudThemeFromStore } from '$lib/services/themePreviewSessionService';
   import { get } from 'svelte/store';
   import { themeBuilderSidebarOpen } from '$lib/stores/themeBuilderSidebar';
   import {
@@ -35,12 +32,12 @@
   import { fade, fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import T from '$lib/components/T.svelte';
+  import { logger } from '../../../utils/logger';
   import { _ } from '../../../lib/i18n';
   import ThemeCard from '$lib/components/theme-store/ThemeCard.svelte';
   import ThemeFilters from '$lib/components/theme-store/ThemeFilters.svelte';
   import SpotlightCarousel from '$lib/components/theme-store/SpotlightCarousel.svelte';
   import CollectionsView from '$lib/components/theme-store/CollectionsView.svelte';
-  import { logger } from '../../../utils/logger';
   import { resolveImageUrl, resolveImageUrlSync } from '$lib/services/themeStoreService';
 
   // Cloud themes
@@ -86,9 +83,6 @@
     new Map<string, { hasUpdate: boolean; currentVersion?: string; latestVersion?: string }>(),
   );
 
-  // Temp theme preview tracking
-  let tempPreviewThemeSlug: string | null = $state(null);
-
   // Collection modal
   let selectedCollection: Collection | null = $state(null);
   let collectionModalOpen = $state(false);
@@ -112,16 +106,6 @@
   let currentPage = $state(1);
   let totalPages = $state(1);
   const themesPerPage = 20;
-
-  onDestroy(async () => {
-    // Always cleanup temp theme when leaving the page
-    if (tempPreviewThemeSlug) {
-      await themeService.cleanupTempTheme(tempPreviewThemeSlug);
-      tempPreviewThemeSlug = null;
-    }
-    // Cancel preview to restore previous theme
-    await cancelThemePreview();
-  });
 
   async function loadBuiltInThemes() {
     try {
@@ -172,21 +156,32 @@
         return;
       }
 
-      // Load spotlight themes
-      const spotlightResponse = await themeStoreService.getSpotlight();
-      if (spotlightResponse) {
-        spotlightThemes = spotlightResponse.themes;
-        // Extract user status from theme objects (included in API response)
+      // Featured carousel: use list endpoint (respects type=desqta). Spotlight mixes in BS+ themes.
+      const featuredResponse = await themeStoreService.listThemes({
+        featured: true,
+        limit: 10,
+        sort: 'downloads',
+      });
+      if (featuredResponse) {
+        spotlightThemes = featuredResponse.themes;
         spotlightThemes.forEach((theme) => extractUserStatusFromTheme(theme));
       }
 
-      // Load all themes
+      // Built-in themes are local — don't query the cloud store with category=builtin
+      if (selectedCategory === 'builtin') {
+        displayThemes = builtInThemes;
+        totalPages = 1;
+        storeAvailable = true;
+        return;
+      }
+
+      // Load cloud themes (search/category/sort handled by API)
       const response = await themeStoreService.listThemes({
         page: currentPage,
         limit: themesPerPage,
         sort: sortBy,
         category: selectedCategory !== 'all' ? selectedCategory : undefined,
-        search: searchQuery || undefined,
+        search: searchQuery.trim() || undefined,
       });
 
       if (response) {
@@ -388,6 +383,9 @@
   }
 
   onMount(async () => {
+    searchQuery = '';
+    selectedCategory = 'all';
+    currentPage = 1;
     await loadThemes();
     await loadCurrentTheme();
     currentTheme.subscribe((val) => {
@@ -500,44 +498,12 @@
         return;
       }
 
-      // If already previewing this theme, cancel it
-      if (tempPreviewThemeSlug === theme.slug && get(previewingTheme)) {
-        await cancelThemePreview();
-        if (tempPreviewThemeSlug) {
-          await themeService.cleanupTempTheme(tempPreviewThemeSlug);
-          tempPreviewThemeSlug = null;
-        }
-        return;
-      }
-
-      // Cancel any existing preview first
-      if (get(previewingTheme)) {
-        await cancelThemePreview();
-        if (tempPreviewThemeSlug) {
-          await themeService.cleanupTempTheme(tempPreviewThemeSlug);
-          tempPreviewThemeSlug = null;
-        }
-      }
-
-      // Download theme to temp folder
-      const tempThemeName = await themeService.previewCloudTheme(themeId);
-
-      // Extract slug from temp theme name (e.g., ".temp/theme-slug" -> "theme-slug")
-      const slug = tempThemeName.replace(/^\.temp\//, '');
-      tempPreviewThemeSlug = slug;
-
-      // Start preview with the temp theme name
-      await startThemePreview(tempThemeName);
+      await previewCloudThemeFromStore(themeId, theme.name);
     } catch (e) {
       logger.error('theme-store', 'handleQuickPreviewTheme', 'Failed to preview theme', {
         error: e,
         themeId,
       });
-      // Cleanup on error
-      if (tempPreviewThemeSlug) {
-        await themeService.cleanupTempTheme(tempPreviewThemeSlug);
-        tempPreviewThemeSlug = null;
-      }
     }
   }
 
@@ -551,55 +517,16 @@
     await loadCurrentTheme(); // Refresh current theme name
   }
 
-  function getFilteredThemes() {
-    let filtered = [...displayThemes]; // Create a copy to avoid mutating state
+  function reloadCloudThemesFromFilters() {
+    currentPage = 1;
+    void loadCloudThemes();
+  }
 
-    // Filter by search
-    if (searchQuery) {
-      filtered = filtered.filter((theme) => {
-        const name = isCloudTheme(theme) ? theme.name : theme.name;
-        const description = isCloudTheme(theme) ? theme.description : theme.description;
-        const author = isCloudTheme(theme) ? theme.author : theme.author;
-        const query = searchQuery.toLowerCase();
-        return (
-          name.toLowerCase().includes(query) ||
-          description.toLowerCase().includes(query) ||
-          author.toLowerCase().includes(query)
-        );
-      });
-    }
-
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter((theme) => {
-        const category = isCloudTheme(theme) ? theme.category : theme.category;
-        if (selectedCategory === 'builtin') {
-          const themeName = isCloudTheme(theme) ? theme.name : theme.name;
-          return builtInThemes.some((t) => t.name === themeName);
-        }
-        return (category || '').toLowerCase() === selectedCategory.toLowerCase();
-      });
-    }
-
-    // Sort (create new sorted array instead of mutating)
-    const sorted = [...filtered].sort((a, b) => {
-      if (sortBy === 'name') {
-        const nameA = isCloudTheme(a) ? a.name : a.name;
-        const nameB = isCloudTheme(b) ? b.name : b.name;
-        return nameA.localeCompare(nameB);
-      } else if (sortBy === 'popular' && isCloudTheme(a) && isCloudTheme(b)) {
-        return b.download_count - a.download_count;
-      } else if (sortBy === 'newest' && isCloudTheme(a) && isCloudTheme(b)) {
-        return b.created_at - a.created_at;
-      } else if (sortBy === 'rating' && isCloudTheme(a) && isCloudTheme(b)) {
-        return b.rating_average - a.rating_average;
-      } else if (sortBy === 'downloads' && isCloudTheme(a) && isCloudTheme(b)) {
-        return b.download_count - a.download_count;
-      }
-      return 0;
-    });
-
-    return sorted;
+  function clearThemeFilters() {
+    searchQuery = '';
+    selectedCategory = 'all';
+    currentPage = 1;
+    void loadCloudThemes();
   }
 
   function capitalizeName(name: string) {
@@ -736,7 +663,7 @@
           bind:value={searchQuery}
           oninput={(e) => {
             searchQuery = e.currentTarget.value;
-            loadCloudThemes();
+            reloadCloudThemesFromFilters();
           }}
           class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none focus:ring-2 accent-ring focus:border-transparent transition-all duration-200" />
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -745,17 +672,17 @@
       </div>
 
       <!-- Category Filters -->
-      <div class="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 flex-1 lg:justify-end">
+      <div class="flex items-center gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide flex-1 lg:justify-end">
         {#each themeCategories as category, i}
           <button
             type="button"
-            class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-200 transform hover:scale-105 active:scale-95 {selectedCategory ===
+            class="flex shrink-0 items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors duration-200 {selectedCategory ===
             category.id
               ? 'accent-bg text-white shadow-md'
               : 'text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700'}"
             onclick={() => {
               selectedCategory = category.id;
-              loadCloudThemes();
+              reloadCloudThemesFromFilters();
             }}
             transition:fade={{ duration: 200, delay: i * 30 }}>
             {category.name}
@@ -774,7 +701,7 @@
               | 'rating'
               | 'downloads'
               | 'name';
-            loadCloudThemes();
+            reloadCloudThemesFromFilters();
           }}
           class="px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-2 accent-ring transition-all duration-200 appearance-none cursor-pointer pr-10">
           <option value="popular">Most Popular</option>
@@ -890,13 +817,13 @@
     {/if}
 
     <!-- All Themes Grid -->
-    {#if getFilteredThemes().length > 0}
+    {#if displayThemes.length > 0}
       <div>
         <h2 class="text-2xl font-bold text-zinc-900 dark:text-white mb-6">
           {searchQuery || selectedCategory !== 'all' ? 'Search Results' : 'All Themes'}
         </h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {#each getFilteredThemes() as theme, i (isCloudTheme(theme) ? theme.id : theme.name)}
+          {#each displayThemes as theme, i (isCloudTheme(theme) ? theme.id : theme.name)}
             {#if isCloudTheme(theme)}
               <ThemeCard
                 {theme}
@@ -1006,81 +933,13 @@
         </p>
         <button
           class="px-6 py-3 accent-bg hover:accent-bg-hover text-white font-medium rounded-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
-          onclick={() => {
-            searchQuery = '';
-            selectedCategory = 'all';
-            loadCloudThemes();
-          }}>
+          onclick={clearThemeFilters}>
           <T key="settings.clear_filters" fallback="Clear Filters" />
         </button>
       </div>
     {/if}
   {/if}
 </div>
-
-<!-- Live preview action bar -->
-{#if $previewingTheme}
-  <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
-    <div
-      class="flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md transition-all duration-300">
-      <span class="text-sm text-zinc-700 dark:text-zinc-300"
-        >Previewing <span class="font-semibold">{$previewingTheme}</span></span>
-      <div class="h-5 w-px bg-zinc-300 dark:bg-zinc-700"></div>
-      <button
-        class="px-3 py-1.5 rounded-lg accent-bg hover:accent-bg-hover text-white text-sm font-medium transition-all duration-200 transform hover:scale-105 active:scale-95"
-        onclick={async () => {
-          const previewThemeName = get(previewingTheme);
-          const isTempTheme = previewThemeName?.startsWith('.temp/') ?? false;
-          const currentTempSlug = tempPreviewThemeSlug; // Capture for TypeScript
-
-          if (isTempTheme && currentTempSlug) {
-            // If it's a temp theme, we need to download it properly first
-            // Find the theme ID from the slug
-            const theme = cloudThemes.find((t) => t.slug === currentTempSlug);
-            if (theme) {
-              try {
-                // Download and install the theme properly
-                await handleDownloadTheme(theme.id);
-                // Apply the installed theme
-                await handleApplyTheme(currentTempSlug);
-                // Cleanup temp folder
-                await themeService.cleanupTempTheme(currentTempSlug);
-                tempPreviewThemeSlug = null;
-              } catch (e) {
-                logger.error('theme-store', 'applyPreviewTheme', 'Failed to apply temp theme', {
-                  error: e,
-                  themeId: theme.id,
-                });
-                // Still cleanup temp on error
-                await themeService.cleanupTempTheme(currentTempSlug);
-                tempPreviewThemeSlug = null;
-              }
-            } else {
-              // Theme not found, just cleanup
-              await themeService.cleanupTempTheme(currentTempSlug);
-              tempPreviewThemeSlug = null;
-            }
-          } else {
-            // Regular theme preview, just apply it
-            await applyPreviewTheme();
-          }
-        }}>
-        <T key="settings.apply" fallback="Apply" />
-      </button>
-      <button
-        class="px-3 py-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-800 dark:text-zinc-200 text-sm font-medium transition-all duration-200 transform hover:scale-105 active:scale-95"
-        onclick={async () => {
-          await cancelThemePreview();
-          if (tempPreviewThemeSlug) {
-            await themeService.cleanupTempTheme(tempPreviewThemeSlug);
-            tempPreviewThemeSlug = null;
-          }
-        }}>
-        <T key="common.cancel" fallback="Cancel" />
-      </button>
-    </div>
-  </div>
-{/if}
 
 <!-- Collection Modal -->
 {#if collectionModalOpen && selectedCollection}

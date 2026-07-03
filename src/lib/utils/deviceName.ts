@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { logger } from '../../../utils/logger';
+import { logger } from '../../utils/logger';
 
 interface DetailedSystemInfo {
   hostname: string;

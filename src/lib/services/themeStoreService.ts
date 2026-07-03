@@ -171,6 +171,18 @@ export interface CloudTheme {
     rating: number;
     comment?: string;
   } | null;
+  /** Store platform: only `desqta` themes work in DesQTA (not BetterSEQTA+). */
+  theme_type?: 'desqta' | 'betterseqta' | string;
+  is_pseudo_theme?: boolean;
+}
+
+/** True when a cloud store theme is built for DesQTA (excludes BetterSEQTA+ extension themes). */
+export function isDesqtaStoreTheme(theme: Pick<CloudTheme, 'theme_type'>): boolean {
+  return theme.theme_type === 'desqta';
+}
+
+export function filterDesqtaStoreThemes<T extends Pick<CloudTheme, 'theme_type'>>(themes: T[]): T[] {
+  return themes.filter(isDesqtaStoreTheme);
 }
 
 export interface ThemeListResponse {
@@ -347,6 +359,10 @@ class ThemeStoreService {
         baseUrl: baseUrl || null,
       });
 
+      if (result?.themes) {
+        result.themes = filterDesqtaStoreThemes(result.themes);
+      }
+
       this.cache.set(cacheKey, { data: result, timestamp: now });
       return result;
     } catch (error) {
@@ -403,6 +419,9 @@ class ThemeStoreService {
         filters: filters || null,
         baseUrl: baseUrl || null,
       });
+      if (result?.themes) {
+        result.themes = filterDesqtaStoreThemes(result.themes);
+      }
       return result;
     } catch (error) {
       logger.error('themeStoreService', 'searchThemes', 'Failed to search themes', { error });
@@ -424,6 +443,15 @@ class ThemeStoreService {
       const result = await invoke<{ collections: Collection[] }>('theme_store_get_collections', {
         baseUrl: baseUrl || null,
       });
+
+      if (result?.collections) {
+        for (const collection of result.collections) {
+          if (collection.themes) {
+            collection.themes = filterDesqtaStoreThemes(collection.themes);
+            collection.theme_count = collection.themes.length;
+          }
+        }
+      }
 
       this.cache.set(cacheKey, { data: result, timestamp: now });
       return result;
@@ -465,6 +493,10 @@ class ThemeStoreService {
       const result = await invoke<ThemeListResponse>('theme_store_get_spotlight', {
         baseUrl: baseUrl || null,
       });
+
+      if (result?.themes) {
+        result.themes = filterDesqtaStoreThemes(result.themes);
+      }
 
       this.cache.set(cacheKey, { data: result, timestamp: now });
       return result;

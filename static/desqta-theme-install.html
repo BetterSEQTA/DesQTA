@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Install DesQTA Theme</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #fafafa;
+        color: #18181b;
+      }
+      main {
+        max-width: 28rem;
+        padding: 2rem;
+        text-align: center;
+      }
+      a.button {
+        display: inline-block;
+        margin-top: 1rem;
+        padding: 0.75rem 1.25rem;
+        border-radius: 0.75rem;
+        background: #6366f1;
+        color: white;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      p {
+        line-height: 1.5;
+        color: #52525b;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Opening DesQTA…</h1>
+      <p id="message">If DesQTA does not open automatically, use the button below.</p>
+      <a id="open-link" class="button" href="#">Open in DesQTA</a>
+    </main>
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var themeId = params.get('id') || params.get('theme_id') || params.get('themeId');
+        if (!themeId) {
+          document.getElementById('message').textContent =
+            'Missing theme id. Use a link from the DesQTA theme store.';
+          document.getElementById('open-link').style.display = 'none';
+          return;
+        }
+        var apply = params.get('apply');
+        var deeplink =
+          'desqta://theme/install?id=' +
+          encodeURIComponent(themeId) +
+          (apply === '0' || apply === 'false' ? '&apply=0' : '');
+        var link = document.getElementById('open-link');
+        link.href = deeplink;
+        window.location.href = deeplink;
+      })();
+    </script>
+  </body>
+</html>

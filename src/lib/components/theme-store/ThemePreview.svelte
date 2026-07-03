@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
-  import { Icon, XMark, ChevronLeft, ChevronRight, CheckCircle, Star } from 'svelte-hero-icons';
+  import { Icon, XMark, ChevronLeft, ChevronRight, CheckCircle, Star, Link } from 'svelte-hero-icons';
   import type { CloudTheme } from '$lib/services/themeStoreService';
   import {
     resolveImageUrl,
@@ -10,6 +10,7 @@
   } from '$lib/services/themeStoreService';
   import type { ThemeManifest } from '$lib/services/themeService';
   import { cloudAuthService } from '$lib/services/cloudAuthService';
+  import { copyThemeInstallLink } from '$lib/utils/themeDeeplink';
   import { logger } from '../../../utils/logger';
 
   interface Props {
@@ -47,6 +48,21 @@
   let reviewComment = $state('');
   let submittingRating = $state(false);
   let isAuthenticated = $state(false);
+  let copyingLink = $state(false);
+
+  async function handleCopyInstallLink() {
+    if (copyingLink) return;
+    copyingLink = true;
+    try {
+      await copyThemeInstallLink(theme.id);
+    } catch (error) {
+      logger.error('ThemePreview', 'handleCopyInstallLink', 'Failed to copy install link', {
+        error,
+      });
+    } finally {
+      copyingLink = false;
+    }
+  }
 
   // Initialize rating form with existing user rating if available
   $effect(() => {
@@ -392,6 +408,15 @@
               Apply Theme
             </button>
           {/if}
+          <button
+            type="button"
+            class="px-4 py-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+            title="Copy install link"
+            aria-label="Copy install link"
+            disabled={copyingLink}
+            onclick={handleCopyInstallLink}>
+            <Icon src={Link} class="w-5 h-5" />
+          </button>
           <button
             type="button"
             class="px-6 py-3 rounded-xl bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-800 dark:text-zinc-200 font-medium transition-all duration-200 transform hover:scale-105 active:scale-95"
