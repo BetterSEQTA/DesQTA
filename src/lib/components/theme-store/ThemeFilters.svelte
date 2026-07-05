@@ -58,11 +58,11 @@
       </div>
 
       <!-- Category Filters -->
-      <div class="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0">
+      <div class="flex items-center gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide">
         {#each categories as category}
           <button
             type="button"
-            class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-200 transform hover:scale-105 active:scale-95 {selectedCategory ===
+            class="flex shrink-0 items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors duration-200 {selectedCategory ===
             category.id
               ? 'accent-bg text-white shadow-md'
               : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}"

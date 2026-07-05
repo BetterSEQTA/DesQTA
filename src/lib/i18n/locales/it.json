@@ -289,7 +289,8 @@
     "no_lessons_today": "Nessuna lezione oggi!",
     "enjoy_free_time": "Goditi il tuo tempo libero o controlla le tue altre attività.",
     "view_assessment": "Visualizza Valutazione",
-    "view_course": "Visualizza Corso"
+    "view_course": "Visualizza Corso",
+    "no_lessons_on_day": "Nessuna lezione in questo giorno"
   },
   "courses": {
     "back_to_subjects": "Torna alle materie",
@@ -679,7 +680,6 @@
     "crop": "Ritaglia",
     "crop_profile_picture": "Ritaglia foto profilo",
     "save_crop": "Salva",
-    "saving": "Salvataggio...",
     "uploading": "Caricamento...",
     "upload": "Carica",
     "language": "Lingua",
@@ -771,7 +771,20 @@
     "apply": "Applica",
     "no_themes_found": "Nessun tema trovato",
     "try_adjusting_filters": "Prova ad aggiustare i tuoi criteri di ricerca o filtro.",
-    "clear_filters": "Cancella Filtri"
+    "clear_filters": "Cancella Filtri",
+    "sections_title": "Sezioni",
+    "developer_settings": "Impostazioni sviluppatore",
+    "rss_feeds": "Feed RSS",
+    "updates": "Aggiornamenti",
+    "troubleshooting": "Risoluzione problemi",
+    "cache_management": "Gestione cache",
+    "unsaved_changes_title": "Modifiche non salvate",
+    "unsaved_changes_message": "Hai modifiche non salvate. Sei sicuro di voler uscire? Le modifiche andranno perse.",
+    "save_and_leave": "Salva ed esci",
+    "discard_changes": "Annulla modifiche",
+    "discard_changes_confirm_title": "Annullare le modifiche?",
+    "discard_changes_confirm_message": "Le modifiche non salvate andranno perse. Questa azione non può essere annullata.",
+    "confirm_discard": "Sì, annulla"
   },
   "analytics": {
     "description": "Monitora le tue prestazioni accademiche e i progressi nel tempo",

@@ -12,6 +12,7 @@
   import PostLoginPrompts from '../lib/components/PostLoginPrompts.svelte';
   import BiometricGate from '../lib/components/BiometricGate.svelte';
   import LoadingScreen from '../lib/components/LoadingScreen.svelte';
+  import ThemePreviewBar from '../lib/components/ThemePreviewBar.svelte';
   import ThemeBuilder from '../lib/components/ThemeBuilder.svelte';
   import { Toaster } from 'svelte-sonner';
   import Onboarding from '../lib/components/Onboarding.svelte';
@@ -81,8 +82,10 @@
   } from 'svelte-hero-icons';
   import { writable, get } from 'svelte/store';
   import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import { onMount, onDestroy } from 'svelte';
   import { browser } from '$app/environment';
+  import { SESSION_INVALID_EVENT } from '$lib/utils/sessionAuth';
   import { isDevTauriPerformance } from '$lib/performance/devTauriContext';
   import {
     installDevTauriPerformanceRuntime,
@@ -182,6 +185,7 @@
   let menu = $state([...DEFAULT_MENU]);
   let menuLoading = $state(true);
   let devMockEnabled = false;
+  let isInvalidatingSession = $state(false);
 
   onMount(() => {
     platform.checkPlatform();
@@ -197,6 +201,7 @@
 
   let unlistenLayout: (() => void) | undefined;
   let unlistenShowWhatsNew: ((e: Event) => void) | undefined;
+  let unlistenThemeDeeplink: (() => void) | undefined;
 
   const checkSession = async () => {
     await checkSessionAuth({
@@ -212,9 +217,11 @@
     unlistenLayout?.();
     window.removeEventListener('redo-onboarding', handleRedoOnboarding);
     window.removeEventListener('weather-settings-changed', handleWeatherSettingsChanged);
+    window.removeEventListener(SESSION_INVALID_EVENT, handleSessionInvalid);
     if (unlistenShowWhatsNew) {
       window.removeEventListener('show-whats-new', unlistenShowWhatsNew);
     }
+    unlistenThemeDeeplink?.();
     if (browser && isDevTauriPerformance()) {
       teardownDevTauriPerformanceRuntime();
     }
@@ -241,12 +248,21 @@
   };
 
   const invalidateSession = async () => {
-    setBiometricSessionUnlocked(false);
-    await invalidateSessionAuth({
-      onSessionInvalid: () => needsSetup.set(true),
-      onClearUser: () => (userInfo = undefined),
-      onCloseDropdown: () => (showUserDropdown = false),
-    });
+    if (isInvalidatingSession) return;
+    isInvalidatingSession = true;
+    try {
+      setBiometricSessionUnlocked(false);
+      await invalidateSessionAuth({
+        onSessionInvalid: () => needsSetup.set(true),
+        onClearUser: () => (userInfo = undefined),
+        onCloseDropdown: () => (showUserDropdown = false),
+      });
+      if (browser && get(page).url.pathname !== '/') {
+        goto('/', { replaceState: true });
+      }
+    } finally {
+      isInvalidatingSession = false;
+    }
   };
 
   const loadEnhancedAnimationsSetting = async () => {
@@ -411,6 +427,10 @@
     });
   };
 
+  const handleSessionInvalid = () => {
+    void invalidateSession();
+  };
+
   onMount(async () => {
     logger.logComponentMount('layout');
 
@@ -440,6 +460,7 @@
     // Set up redo onboarding listener
     window.addEventListener('redo-onboarding', handleRedoOnboarding);
     window.addEventListener('weather-settings-changed', handleWeatherSettingsChanged);
+    window.addEventListener(SESSION_INVALID_EVENT, handleSessionInvalid);
 
     // Initialize theme and i18n first
     await Promise.all([
@@ -456,6 +477,13 @@
     });
 
     shellReady = true;
+
+    try {
+      const { initThemeDeeplinkHandler } = await import('$lib/services/themeDeeplinkService');
+      unlistenThemeDeeplink = await initThemeDeeplinkHandler();
+    } catch (e) {
+      logger.debug('layout', 'onMount', 'Failed to init theme deeplink handler', { error: e });
+    }
 
     try {
       // Load saved language preference
@@ -593,38 +621,6 @@
       window.addEventListener('show-whats-new', handleShowWhatsNew);
       unlistenShowWhatsNew = handleShowWhatsNew;
 
-      // Validate SEQTA session BEFORE starting background sync
-      // This prevents sync_analytics_data (and other warmup) from running in parallel with
-      // session invalidation - which could clear the session mid-sync and cause 401 errors
-      if (!devMockEnabled && !$needsSetup) {
-        try {
-          const response = await seqtaFetch('/seqta/student/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: { mode: 'normal', query: null, redirect_url: seqtaUrl },
-          });
-
-          const responseStr = typeof response === 'string' ? response : JSON.stringify(response);
-          const isAuthenticated = responseStr.includes('site.name.abbrev');
-
-          // Only logout on explicit auth failures (401, unauthorized), NOT on 404 or generic errors
-          // 404 and other non-auth errors can include "error" in the response and would incorrectly invalidate the session
-          const isAuthFailure =
-            !isAuthenticated &&
-            (responseStr.includes('"status":"401"') ||
-              responseStr.includes('"status": "401"') ||
-              responseStr.includes('unauthorized') ||
-              responseStr.toLowerCase().includes('authentication failed'));
-
-          if (isAuthFailure) {
-            logger.warn('layout', 'onMount', 'Session invalid, redirecting to login');
-            await invalidateSession();
-          }
-        } catch (e) {
-          logger.error('layout', 'onMount', 'SEQTA session check failed', { error: e });
-        }
-      }
-
       // Load cached data from SQLite immediately for instant UI
       // Pass needsSetup so we skip background sync when user is on login screen (or after session invalidation)
       const { initializeApp } = await import('$lib/services/startupService');
@@ -677,6 +673,20 @@
           initQueueService();
         }),
       );
+    }
+  });
+
+  // Safety net: if the app shell is up without user info, send to login instead of "Session expired"
+  $effect(() => {
+    if (
+      shellReady &&
+      !contentLoading &&
+      !$needsSetup &&
+      !userInfo &&
+      !devMockEnabled &&
+      !isInvalidatingSession
+    ) {
+      void invalidateSession();
     }
   });
 
@@ -1072,6 +1082,7 @@
   </div>
 {/if}
 <UploadProgressBar />
+<ThemePreviewBar />
 <Toaster
   position={isMobile ? 'top-center' : 'bottom-right'}
   theme={$theme === 'dark' ? 'dark' : 'light'}

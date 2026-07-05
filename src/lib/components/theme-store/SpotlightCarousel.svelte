@@ -165,20 +165,34 @@
 
 {#if themes.length > 0}
   <div
-    class="relative w-full h-[500px] overflow-hidden mb-12 rounded-2xl"
+    class="relative w-full h-[500px] overflow-hidden mb-12 rounded-2xl flex"
     role="region"
     aria-label="Featured themes carousel"
     onmouseenter={handleMouseEnter}
     onmouseleave={handleMouseLeave}>
-    <!-- Featured Badge -->
-    <div
-      class="absolute top-6 left-6 z-20 flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shadow-lg">
-      <Icon src={Sparkles} class="w-4 h-4 accent-text" />
-      <span class="text-sm font-semibold text-zinc-900 dark:text-white">Featured</span>
-    </div>
+    <!-- Side navigation (outside content, never overlaps text) -->
+    {#if themes.length > 1}
+      <div class="flex shrink-0 items-center px-3 z-20">
+        <button
+          type="button"
+          onclick={prevSlide}
+          class="p-3 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 border border-white/20 transition-all duration-200 transform hover:scale-110 active:scale-95"
+          aria-label="Previous theme">
+          <Icon src={ChevronLeft} class="w-6 h-6" />
+        </button>
+      </div>
+    {/if}
 
-    <!-- Slides Container -->
-    <div class="relative w-full h-full">
+    <div class="relative flex-1 min-w-0 h-full">
+      <!-- Featured Badge -->
+      <div
+        class="absolute top-6 left-6 z-20 flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shadow-lg">
+        <Icon src={Sparkles} class="w-4 h-4 accent-text" />
+        <span class="text-sm font-semibold text-zinc-900 dark:text-white">Featured</span>
+      </div>
+
+      <!-- Slides Container -->
+      <div class="relative w-full h-full">
       {#each themes as theme, i}
         {#if i === currentIndex}
           {@const previewUrl = previewImageUrls.get(theme.id) || null}
@@ -201,8 +215,8 @@
             </div>
 
             <!-- Content -->
-            <div class="relative z-10 h-full flex items-center" role="presentation">
-              <div class="w-full mx-auto p-4">
+            <div class="relative z-10 h-full flex items-center px-6 lg:px-10 pb-16" role="presentation">
+              <div class="w-full mx-auto">
                 <div class="grid lg:grid-cols-2 gap-8 items-center">
                   <!-- Left: Theme Info -->
                   <div class="space-y-6 text-white">
@@ -314,39 +328,34 @@
           </div>
         {/if}
       {/each}
+      </div>
+
+      <!-- Navigation Dots -->
+      {#if themes.length > 1}
+        <div
+          class="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
+          {#each themes as _, i}
+            <button
+              type="button"
+              class="h-2 rounded-full transition-all duration-300 {i === currentIndex
+                ? 'w-8 accent-bg'
+                : 'w-2 bg-white/40 hover:bg-white/60'}"
+              onclick={() => goToSlide(i)}
+              aria-label={`Go to theme ${i + 1}`}></button>
+          {/each}
+        </div>
+      {/if}
     </div>
 
-    <!-- Navigation Arrows -->
     {#if themes.length > 1}
-      <button
-        type="button"
-        onclick={prevSlide}
-        class="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 border border-white/20 transition-all duration-200 transform hover:scale-110 active:scale-95"
-        aria-label="Previous theme">
-        <Icon src={ChevronLeft} class="w-6 h-6" />
-      </button>
-      <button
-        type="button"
-        onclick={nextSlide}
-        class="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 border border-white/20 transition-all duration-200 transform hover:scale-110 active:scale-95"
-        aria-label="Next theme">
-        <Icon src={ChevronRight} class="w-6 h-6" />
-      </button>
-    {/if}
-
-    <!-- Navigation Dots -->
-    {#if themes.length > 1}
-      <div
-        class="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
-        {#each themes as _, i}
-          <button
-            type="button"
-            class="h-2 rounded-full transition-all duration-300 {i === currentIndex
-              ? 'w-8 accent-bg'
-              : 'w-2 bg-white/40 hover:bg-white/60'}"
-            onclick={() => goToSlide(i)}
-            aria-label={`Go to theme ${i + 1}`}></button>
-        {/each}
+      <div class="flex shrink-0 items-center px-3 z-20">
+        <button
+          type="button"
+          onclick={nextSlide}
+          class="p-3 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 border border-white/20 transition-all duration-200 transform hover:scale-110 active:scale-95"
+          aria-label="Next theme">
+          <Icon src={ChevronRight} class="w-6 h-6" />
+        </button>
       </div>
     {/if}
   </div>

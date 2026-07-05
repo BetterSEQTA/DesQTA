@@ -19,6 +19,7 @@
     mergeAdjacentTimetableLessons,
     normalizeSeqtaEventsPayloadRows,
     timetableLessonsFromSeqtaEventsRows,
+    TIMETABLE_DEFAULT_LESSON_COLOUR,
   } from '../../utils/timetableUtils';
   import { authService } from '$lib/services/authService';
   import { exportToCSV, exportToPDF, exportToiCal } from '../../utils/timetableExport';
@@ -192,7 +193,7 @@
             typeof item.code === 'string' ? item.code : String(item.description ?? '').slice(0, 32) || '—';
           const colourPrefName = `timetable.subject.colour.${code}`;
           const subjectColour = colours.find((c) => c.name === colourPrefName);
-          const color = subjectColour ? subjectColour.value : 'var(--accent)';
+          const color = subjectColour ? subjectColour.value : TIMETABLE_DEFAULT_LESSON_COLOUR;
 
           const dateObj = parseDate(item.date);
           const dayIdx = getDayIndex(dateObj);
@@ -402,6 +403,14 @@
       height: number;
     },
   ) {
+    if (showLessonPopout && selectedLesson?.id === lesson.id) {
+      showLessonPopout = false;
+      selectedLesson = null;
+      lessonAnchorElement = null;
+      lessonAnchorRect = null;
+      return;
+    }
+
     selectedLesson = lesson;
     lessonAnchorElement = element;
     lessonAnchorRect = anchorRect ?? (() => {
@@ -428,7 +437,7 @@
       const lessonDate = parseDate(lesson.date);
       return lessonDate >= weekStart && lessonDate <= new Date(weekStart.getTime() + 4 * 86400000);
     });
-    if (exportToPDF(weekLessons, weekStart)) {
+    if (exportToPDF(weekLessons, weekStart, { timeRange: settings.timeRange })) {
       toastStore.success(
         $_('timetable.download_pdf_success') || 'Timetable downloaded to Downloads',
       );

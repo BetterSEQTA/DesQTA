@@ -289,7 +289,8 @@
     "no_lessons_today": "Nenhuma aula hoje!",
     "enjoy_free_time": "Aproveite seu tempo livre ou verifique suas outras tarefas.",
     "view_assessment": "Ver Avaliação",
-    "view_course": "Ver Curso"
+    "view_course": "Ver Curso",
+    "no_lessons_on_day": "Sem aulas neste dia"
   },
   "courses": {
     "back_to_subjects": "Voltar para matérias",
@@ -679,7 +680,6 @@
     "crop": "Recortar",
     "crop_profile_picture": "Recortar foto de perfil",
     "save_crop": "Salvar",
-    "saving": "Salvando...",
     "uploading": "Enviando...",
     "upload": "Enviar",
     "language": "Idioma",
@@ -771,7 +771,20 @@
     "apply": "Aplicar",
     "no_themes_found": "Nenhum tema encontrado",
     "try_adjusting_filters": "Tente ajustar seus critérios de pesquisa ou filtro.",
-    "clear_filters": "Limpar Filtros"
+    "clear_filters": "Limpar Filtros",
+    "sections_title": "Secções",
+    "developer_settings": "Definições de programador",
+    "rss_feeds": "Feeds RSS",
+    "updates": "Atualizações",
+    "troubleshooting": "Resolução de problemas",
+    "cache_management": "Gestão de cache",
+    "unsaved_changes_title": "Alterações não guardadas",
+    "unsaved_changes_message": "Tem alterações não guardadas. Tem a certeza de que deseja sair? As alterações serão perdidas.",
+    "save_and_leave": "Guardar e sair",
+    "discard_changes": "Descartar alterações",
+    "discard_changes_confirm_title": "Descartar alterações?",
+    "discard_changes_confirm_message": "As edições não guardadas serão perdidas. Isto não pode ser desfeito.",
+    "confirm_discard": "Sim, descartar"
   },
   "analytics": {
     "description": "Acompanhe seu desempenho acadêmico e progresso ao longo do tempo",

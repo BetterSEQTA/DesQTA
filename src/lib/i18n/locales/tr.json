@@ -215,7 +215,12 @@
     "step6_desc": "Return to DesQTA and use the \"Upload QR Code\" button to select and upload your saved QR code image. DesQTA will automatically log you in!",
     "help_title": "Need More Help?",
     "help_desc": "If you can't find the \"Connect Mobile App\" option, it might be called something different at your school, such as:",
-    "help_options": ["Mobile Device Registration", "App Setup", "QR Code Setup", "Connect Device"],
+    "help_options": [
+      "Mobile Device Registration",
+      "App Setup",
+      "QR Code Setup",
+      "Connect Device"
+    ],
     "help_contact": "Contact your school's IT support if you still can't locate this option.",
     "got_it": "Got it, thanks!"
   },
@@ -284,7 +289,8 @@
     "no_lessons_today": "No lessons today!",
     "enjoy_free_time": "Enjoy your free time or check your other tasks.",
     "view_assessment": "View Assessment",
-    "view_course": "View Course"
+    "view_course": "View Course",
+    "no_lessons_on_day": "Bu gün ders yok"
   },
   "courses": {
     "back_to_subjects": "Back to subjects",
@@ -655,7 +661,7 @@
   },
   "settings": {
     "saved": "Saved!",
-    "saving": "Saving...",
+    "saving": "Kaydediliyor...",
     "save_changes": "Save Changes",
     "loading_settings": "Loading settings...",
     "personal_preferences": "Personal Preferences",
@@ -674,7 +680,6 @@
     "crop": "Kırp",
     "crop_profile_picture": "Profil resmini kırp",
     "save_crop": "Kaydet",
-    "saving": "Kaydediliyor...",
     "uploading": "Uploading...",
     "upload": "Upload",
     "language": "Language",
@@ -766,7 +771,20 @@
     "apply": "Apply",
     "no_themes_found": "No themes found",
     "try_adjusting_filters": "Try adjusting your search or filter criteria.",
-    "clear_filters": "Clear Filters"
+    "clear_filters": "Clear Filters",
+    "sections_title": "Bölümler",
+    "developer_settings": "Geliştirici Ayarları",
+    "rss_feeds": "RSS Akışları",
+    "updates": "Güncellemeler",
+    "troubleshooting": "Sorun Giderme",
+    "cache_management": "Önbellek Yönetimi",
+    "unsaved_changes_title": "Kaydedilmemiş değişiklikler",
+    "unsaved_changes_message": "Kaydedilmemiş değişiklikleriniz var. Ayrılmak istediğinizden emin misiniz? Değişiklikleriniz kaybolacak.",
+    "save_and_leave": "Kaydet ve ayrıl",
+    "discard_changes": "Değişiklikleri at",
+    "discard_changes_confirm_title": "Değişiklikler atılsın mı?",
+    "discard_changes_confirm_message": "Kaydedilmemiş düzenlemeleriniz kaybolacak. Bu işlem geri alınamaz.",
+    "confirm_discard": "Evet, at"
   },
   "analytics": {
     "description": "Track your academic performance and progress over time",
